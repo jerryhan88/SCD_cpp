@@ -7,7 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8FE2035623FA64E000822791 /* Base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE2035423FA64E000822791 /* Base.cpp */; };
+		8FE2035923FA65E300822791 /* libconcert.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035823FA65E300822791 /* libconcert.a */; };
+		8FE2035D23FA65FA00822791 /* libilocplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035A23FA65FA00822791 /* libilocplex.a */; };
+		8FE2035E23FA65FA00822791 /* libcplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035B23FA65FA00822791 /* libcplex.a */; };
+		8FE2035F23FA65FA00822791 /* libcplexdistmip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035C23FA65FA00822791 /* libcplexdistmip.a */; };
+		8FE2036123FA667200822791 /* ILP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE2036023FA667200822791 /* ILP.cpp */; };
+		8FE9E84423FB8B10005B203C /* Solution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE9E84223FB8B10005B203C /* Solution.cpp */; };
 		8FF890AC23F8E416005FA41E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890AB23F8E416005FA41E /* main.cpp */; };
+		8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890B223F8F1B1005FA41E /* Problem.cpp */; };
+		8FF890B723F93A3D005FA41E /* Etc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890B523F93A3D005FA41E /* Etc.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +32,21 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		8FE2035423FA64E000822791 /* Base.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Base.cpp; sourceTree = "<group>"; };
+		8FE2035523FA64E000822791 /* Base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Base.hpp; sourceTree = "<group>"; };
+		8FE2035823FA65E300822791 /* libconcert.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libconcert.a; path = "../../../../Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic/libconcert.a"; sourceTree = "<group>"; };
+		8FE2035A23FA65FA00822791 /* libilocplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilocplex.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libilocplex.a"; sourceTree = "<group>"; };
+		8FE2035B23FA65FA00822791 /* libcplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplex.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplex.a"; sourceTree = "<group>"; };
+		8FE2035C23FA65FA00822791 /* libcplexdistmip.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplexdistmip.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplexdistmip.a"; sourceTree = "<group>"; };
+		8FE2036023FA667200822791 /* ILP.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ILP.cpp; sourceTree = "<group>"; };
+		8FE9E84223FB8B10005B203C /* Solution.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Solution.cpp; sourceTree = "<group>"; };
+		8FE9E84323FB8B10005B203C /* Solution.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Solution.hpp; sourceTree = "<group>"; };
 		8FF890A823F8E416005FA41E /* SCD_cpp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SCD_cpp; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FF890AB23F8E416005FA41E /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		8FF890B223F8F1B1005FA41E /* Problem.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Problem.cpp; sourceTree = "<group>"; };
+		8FF890B323F8F1B1005FA41E /* Problem.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Problem.hpp; sourceTree = "<group>"; };
+		8FF890B523F93A3D005FA41E /* Etc.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Etc.cpp; sourceTree = "<group>"; };
+		8FF890B623F93A3D005FA41E /* Etc.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Etc.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,17 +54,56 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FE2035D23FA65FA00822791 /* libilocplex.a in Frameworks */,
+				8FE2035E23FA65FA00822791 /* libcplex.a in Frameworks */,
+				8FE2035F23FA65FA00822791 /* libcplexdistmip.a in Frameworks */,
+				8FE2035923FA65E300822791 /* libconcert.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8FE2035323FA64AB00822791 /* Approach */ = {
+			isa = PBXGroup;
+			children = (
+				8FE2035423FA64E000822791 /* Base.cpp */,
+				8FE2035523FA64E000822791 /* Base.hpp */,
+				8FE2036023FA667200822791 /* ILP.cpp */,
+			);
+			path = Approach;
+			sourceTree = "<group>";
+		};
+		8FE2035723FA65E300822791 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8FE2035B23FA65FA00822791 /* libcplex.a */,
+				8FE2035C23FA65FA00822791 /* libcplexdistmip.a */,
+				8FE2035A23FA65FA00822791 /* libilocplex.a */,
+				8FE2035823FA65E300822791 /* libconcert.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8FE9E84123FB8AE4005B203C /* Other */ = {
+			isa = PBXGroup;
+			children = (
+				8FF890B223F8F1B1005FA41E /* Problem.cpp */,
+				8FF890B323F8F1B1005FA41E /* Problem.hpp */,
+				8FF890B523F93A3D005FA41E /* Etc.cpp */,
+				8FF890B623F93A3D005FA41E /* Etc.hpp */,
+				8FE9E84223FB8B10005B203C /* Solution.cpp */,
+				8FE9E84323FB8B10005B203C /* Solution.hpp */,
+			);
+			path = Other;
+			sourceTree = "<group>";
+		};
 		8FF8909F23F8E416005FA41E = {
 			isa = PBXGroup;
 			children = (
 				8FF890AA23F8E416005FA41E /* SCD_cpp */,
 				8FF890A923F8E416005FA41E /* Products */,
+				8FE2035723FA65E300822791 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,6 +118,8 @@
 		8FF890AA23F8E416005FA41E /* SCD_cpp */ = {
 			isa = PBXGroup;
 			children = (
+				8FE9E84123FB8AE4005B203C /* Other */,
+				8FE2035323FA64AB00822791 /* Approach */,
 				8FF890AB23F8E416005FA41E /* main.cpp */,
 			);
 			path = SCD_cpp;
@@ -119,7 +182,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FE9E84423FB8B10005B203C /* Solution.cpp in Sources */,
+				8FE2035623FA64E000822791 /* Base.cpp in Sources */,
+				8FE2036123FA667200822791 /* ILP.cpp in Sources */,
+				8FF890B723F93A3D005FA41E /* Etc.cpp in Sources */,
 				8FF890AC23F8E416005FA41E /* main.cpp in Sources */,
+				8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,6 +307,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				GCC_PREPROCESSOR_DEFINITIONS = IL_STD;
+				HEADER_SEARCH_PATHS = (
+					"/Users/ckhan/workspace/json-develop/single_include",
+					/Applications/CPLEX_Studio128/cplex/include,
+					/Applications/CPLEX_Studio128/concert/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -247,6 +325,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = (
+					"/Users/ckhan/workspace/json-develop/single_include",
+					/Applications/CPLEX_Studio128/cplex/include,
+					/Applications/CPLEX_Studio128/concert/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
