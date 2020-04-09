@@ -6,16 +6,16 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Base.hpp"
+#include "../../include/BaseMM.hpp"
 
-void Base::build_baseModel() {
+void BaseMM::build_baseModel() {
     def_objF();
     def_ETA_cnsts(prob, env, y_ak, z_aek, baseModel);
     def_RUT_cnsts();
     def_COM_cnsts();
 }
 
-void Base::def_objF() {
+void BaseMM::def_objF() {
     IloExpr objF(env);
     for (int k: prob->K) {
         for (int a : prob->A) {
@@ -29,7 +29,7 @@ void Base::def_objF() {
     objF.end();
 }
 
-void Base::def_RUT_cnsts() {
+void BaseMM::def_RUT_cnsts() {
     // Routing constraints
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
@@ -39,7 +39,7 @@ void Base::def_RUT_cnsts() {
     }
 }
 
-void Base::def_FC_cnsts_aeGiven(int a, int e) {
+void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     char buf[DEFAULT_BUFFER_SIZE];
     IloRangeArray cnsts(env);
     IloExpr linExpr(env);
@@ -135,7 +135,7 @@ void Base::def_FC_cnsts_aeGiven(int a, int e) {
     baseModel->add(cnsts);
 }
 
-void Base::def_AT_cnsts_aeGiven(int a, int e) {
+void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     //
     // Constraints associated with the arrival time
     //
@@ -249,7 +249,7 @@ void Base::def_AT_cnsts_aeGiven(int a, int e) {
     baseModel->add(cnsts);
 }
 
-void Base::def_COM_cnsts() {
+void BaseMM::def_COM_cnsts() {
     char buf[DEFAULT_BUFFER_SIZE];
     IloExpr linExpr(env);
     //

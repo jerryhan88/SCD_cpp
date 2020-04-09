@@ -15,7 +15,7 @@
 
 #include "ck_util/util.hpp"
 #include "nlohmann/json.hpp"
-#include "ck_route/Problem.hpp"     // from BnC_CPLEX
+#include "ck_route/Other.hpp"     // from BnC_CPLEX
 
 class Problem {
 public:

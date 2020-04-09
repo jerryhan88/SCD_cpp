@@ -7,7 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8FE2035623FA64E000822791 /* Base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE2035423FA64E000822791 /* Base.cpp */; };
+		8F69CFF3242B4AFB0094C519 /* RouterSCD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */; };
+		8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FA66BBA2404BF2400CA0CCB /* LRH.cpp */; };
+		8FB3CCB6242DE25C005156D4 /* libsequencer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3CCB5242DE25C005156D4 /* libsequencer.a */; };
+		8FB3CCBA2430E66B005156D4 /* PureGH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FB3CCB82430E66B005156D4 /* PureGH.cpp */; };
+		8FBAA1BD240CE4970096ECCA /* librouter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FBAA1BC240CE4960096ECCA /* librouter.a */; };
+		8FC362332434A95F00B68635 /* ThreadPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FC362312434A95F00B68635 /* ThreadPool.cpp */; };
+		8FCE115024079FE100C8CB07 /* libutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FCE114F24079FE100C8CB07 /* libutil.a */; };
+		8FE2035623FA64E000822791 /* BaseMM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE2035423FA64E000822791 /* BaseMM.cpp */; };
 		8FE2035923FA65E300822791 /* libconcert.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035823FA65E300822791 /* libconcert.a */; };
 		8FE2035D23FA65FA00822791 /* libilocplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035A23FA65FA00822791 /* libilocplex.a */; };
 		8FE2035E23FA65FA00822791 /* libcplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035B23FA65FA00822791 /* libcplex.a */; };
@@ -16,7 +23,6 @@
 		8FE9E84423FB8B10005B203C /* Solution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE9E84223FB8B10005B203C /* Solution.cpp */; };
 		8FF890AC23F8E416005FA41E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890AB23F8E416005FA41E /* main.cpp */; };
 		8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890B223F8F1B1005FA41E /* Problem.cpp */; };
-		8FF890B723F93A3D005FA41E /* Etc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FF890B523F93A3D005FA41E /* Etc.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,8 +38,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		8FE2035423FA64E000822791 /* Base.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Base.cpp; sourceTree = "<group>"; };
-		8FE2035523FA64E000822791 /* Base.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Base.hpp; sourceTree = "<group>"; };
+		8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RouterSCD.cpp; sourceTree = "<group>"; };
+		8F69CFF4242B4B420094C519 /* RouterSCD.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = RouterSCD.hpp; sourceTree = "<group>"; };
+		8FA66BBA2404BF2400CA0CCB /* LRH.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LRH.cpp; sourceTree = "<group>"; };
+		8FB3CCB5242DE25C005156D4 /* libsequencer.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsequencer.a; path = ../BnC_CPLEX/BnC_CPLEX/lib/libsequencer.a; sourceTree = "<group>"; };
+		8FB3CCB724308B50005156D4 /* SolApprBase.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SolApprBase.hpp; sourceTree = "<group>"; };
+		8FB3CCB82430E66B005156D4 /* PureGH.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PureGH.cpp; sourceTree = "<group>"; };
+		8FB3CCB92430E66B005156D4 /* PureGH.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PureGH.hpp; sourceTree = "<group>"; };
+		8FBAA1BC240CE4960096ECCA /* librouter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = librouter.a; path = ../BnC_CPLEX/BnC_CPLEX/lib/librouter.a; sourceTree = "<group>"; };
+		8FC362312434A95F00B68635 /* ThreadPool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadPool.cpp; sourceTree = "<group>"; };
+		8FC362322434A95F00B68635 /* ThreadPool.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ThreadPool.hpp; sourceTree = "<group>"; };
+		8FCE114F24079FE100C8CB07 /* libutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libutil.a; path = ../util/lib/libutil.a; sourceTree = "<group>"; };
+		8FE2035423FA64E000822791 /* BaseMM.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BaseMM.cpp; sourceTree = "<group>"; };
+		8FE2035523FA64E000822791 /* BaseMM.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = BaseMM.hpp; sourceTree = "<group>"; };
 		8FE2035823FA65E300822791 /* libconcert.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libconcert.a; path = "../../../../Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic/libconcert.a"; sourceTree = "<group>"; };
 		8FE2035A23FA65FA00822791 /* libilocplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilocplex.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libilocplex.a"; sourceTree = "<group>"; };
 		8FE2035B23FA65FA00822791 /* libcplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplex.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplex.a"; sourceTree = "<group>"; };
@@ -45,8 +62,6 @@
 		8FF890AB23F8E416005FA41E /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		8FF890B223F8F1B1005FA41E /* Problem.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Problem.cpp; sourceTree = "<group>"; };
 		8FF890B323F8F1B1005FA41E /* Problem.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Problem.hpp; sourceTree = "<group>"; };
-		8FF890B523F93A3D005FA41E /* Etc.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Etc.cpp; sourceTree = "<group>"; };
-		8FF890B623F93A3D005FA41E /* Etc.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Etc.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +69,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FB3CCB6242DE25C005156D4 /* libsequencer.a in Frameworks */,
+				8FBAA1BD240CE4970096ECCA /* librouter.a in Frameworks */,
+				8FCE115024079FE100C8CB07 /* libutil.a in Frameworks */,
 				8FE2035D23FA65FA00822791 /* libilocplex.a in Frameworks */,
 				8FE2035E23FA65FA00822791 /* libcplex.a in Frameworks */,
 				8FE2035F23FA65FA00822791 /* libcplexdistmip.a in Frameworks */,
@@ -64,12 +82,46 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8FC362302434A82E00B68635 /* Concurrency */ = {
+			isa = PBXGroup;
+			children = (
+				8FC362312434A95F00B68635 /* ThreadPool.cpp */,
+			);
+			path = Concurrency;
+			sourceTree = "<group>";
+		};
+		8FCD28A6240A4B9E000288F0 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				8FC362302434A82E00B68635 /* Concurrency */,
+				8FE9E84123FB8AE4005B203C /* Other */,
+				8FE2035323FA64AB00822791 /* Approach */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		8FCD28A7240A4BB0000288F0 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				8FB3CCB724308B50005156D4 /* SolApprBase.hpp */,
+				8FE2035523FA64E000822791 /* BaseMM.hpp */,
+				8FB3CCB92430E66B005156D4 /* PureGH.hpp */,
+				8FE9E84323FB8B10005B203C /* Solution.hpp */,
+				8FF890B323F8F1B1005FA41E /* Problem.hpp */,
+				8F69CFF4242B4B420094C519 /* RouterSCD.hpp */,
+				8FC362322434A95F00B68635 /* ThreadPool.hpp */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
 		8FE2035323FA64AB00822791 /* Approach */ = {
 			isa = PBXGroup;
 			children = (
-				8FE2035423FA64E000822791 /* Base.cpp */,
-				8FE2035523FA64E000822791 /* Base.hpp */,
+				8FE2035423FA64E000822791 /* BaseMM.cpp */,
 				8FE2036023FA667200822791 /* ILP.cpp */,
+				8FA66BBA2404BF2400CA0CCB /* LRH.cpp */,
+				8FB3CCB82430E66B005156D4 /* PureGH.cpp */,
+				8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */,
 			);
 			path = Approach;
 			sourceTree = "<group>";
@@ -77,6 +129,9 @@
 		8FE2035723FA65E300822791 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8FB3CCB5242DE25C005156D4 /* libsequencer.a */,
+				8FBAA1BC240CE4960096ECCA /* librouter.a */,
+				8FCE114F24079FE100C8CB07 /* libutil.a */,
 				8FE2035B23FA65FA00822791 /* libcplex.a */,
 				8FE2035C23FA65FA00822791 /* libcplexdistmip.a */,
 				8FE2035A23FA65FA00822791 /* libilocplex.a */,
@@ -89,11 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				8FF890B223F8F1B1005FA41E /* Problem.cpp */,
-				8FF890B323F8F1B1005FA41E /* Problem.hpp */,
-				8FF890B523F93A3D005FA41E /* Etc.cpp */,
-				8FF890B623F93A3D005FA41E /* Etc.hpp */,
 				8FE9E84223FB8B10005B203C /* Solution.cpp */,
-				8FE9E84323FB8B10005B203C /* Solution.hpp */,
 			);
 			path = Other;
 			sourceTree = "<group>";
@@ -118,8 +169,8 @@
 		8FF890AA23F8E416005FA41E /* SCD_cpp */ = {
 			isa = PBXGroup;
 			children = (
-				8FE9E84123FB8AE4005B203C /* Other */,
-				8FE2035323FA64AB00822791 /* Approach */,
+				8FCD28A7240A4BB0000288F0 /* include */,
+				8FCD28A6240A4B9E000288F0 /* src */,
 				8FF890AB23F8E416005FA41E /* main.cpp */,
 			);
 			path = SCD_cpp;
@@ -183,10 +234,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				8FE9E84423FB8B10005B203C /* Solution.cpp in Sources */,
-				8FE2035623FA64E000822791 /* Base.cpp in Sources */,
+				8FC362332434A95F00B68635 /* ThreadPool.cpp in Sources */,
+				8FE2035623FA64E000822791 /* BaseMM.cpp in Sources */,
 				8FE2036123FA667200822791 /* ILP.cpp in Sources */,
-				8FF890B723F93A3D005FA41E /* Etc.cpp in Sources */,
+				8F69CFF3242B4AFB0094C519 /* RouterSCD.cpp in Sources */,
 				8FF890AC23F8E416005FA41E /* main.cpp in Sources */,
+				8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */,
+				8FB3CCBA2430E66B005156D4 /* PureGH.cpp in Sources */,
 				8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -312,10 +366,14 @@
 					"/Users/ckhan/workspace/json-develop/single_include",
 					/Applications/CPLEX_Studio128/cplex/include,
 					/Applications/CPLEX_Studio128/concert/include,
+					/Users/ckhan/workspace/util/include,
+					/Users/ckhan/workspace/BnC_CPLEX/BnC_CPLEX/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
 					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+					/Users/ckhan/workspace/util/lib,
+					/Users/ckhan/workspace/BnC_CPLEX/BnC_CPLEX/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -329,10 +387,14 @@
 					"/Users/ckhan/workspace/json-develop/single_include",
 					/Applications/CPLEX_Studio128/cplex/include,
 					/Applications/CPLEX_Studio128/concert/include,
+					/Users/ckhan/workspace/util/include,
+					/Users/ckhan/workspace/BnC_CPLEX/BnC_CPLEX/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
 					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+					/Users/ckhan/workspace/util/lib,
+					/Users/ckhan/workspace/BnC_CPLEX/BnC_CPLEX/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

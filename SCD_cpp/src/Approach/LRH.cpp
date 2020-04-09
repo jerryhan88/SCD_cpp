@@ -6,39 +6,95 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Base.hpp"
+#include "../../include/BaseMM.hpp"
+
+
+std::mutex lrh_mtx_vec;
 
 Solution* LRH::solve() {
     baseCplex->solve();
+    
+//    char tmp[2048];
+//    std::cout << "\n";
+    
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K_ae[a][e]) {
                 lrh_l_aek[a][e][k] = baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]);
+//                sprintf(tmp, "-1; (%d,%d,%d): %e", a, e, k, lrh_l_aek[a][e][k]);
+//                std::cout << tmp << "\n";
             }
         }
     }
-    logging("Initialization",
-            " ", " ", " ", " ",
-            " ");
+    if (logPath != "") {
+        logging("Initialization",
+        " ", " ", " ", " ",
+        " ");
+    }
     //
-    while (tt->get_elapsedTimeCPU() < TIME_LIMIT_SEC) {
+    int terminationCon = -1;
+    while (tt->get_elapsedTimeWall() < time_limit_sec) {
         solve_dualProblem();
+        dualSols.push_back(L_V);
+        //
         solve_pexModel();
-        updateLMs();
-        logging("IterSummary",
-                " ", " ", " ", " ",
-                "Dual Gap: " + std::to_string(bestSol->gap));
-        if (bestSol->gap < DUAL_GAP_LIMIT) {
-            break;
+        primalSols.push_back(F_V);
+        bool zeroDenominator = updateLMs();
+        if (logPath != "") {
+            logging("IterSummary",
+            " ", " ", " ", " ",
+            "Dual Gap: " + std::to_string(bestSol->gap));
         }
         if (NUM_ITER_LIMIT == ++numIters) {
+            terminationCon = 0;
+            break;
+        }
+        if (bestSol->gap < DUAL_GAP_LIMIT) {
+            terminationCon = 1;
+            break;
+        }
+        if (zeroDenominator) {
+            terminationCon = 2;
             break;
         }
     }
+    //
+    char note[2048];
+    sprintf(note,
+            "\"{\'lastUpdatedIter\': %d, \'bestSolCpuT\': %f, \'bestSolWallT\': %f, \'terminationCon\': %d, \'numIters\': %d}\"",
+            bestSol->lastUpdatedIter, bestSol->cpuT, bestSol->wallT, terminationCon, numIters);
+    bestSol->note = std::string(note);
+    bestSol->cpuT = tt->get_elapsedTimeCPU();
+    bestSol->wallT = tt->get_elapsedTimeWall();
+    //
+    char row[2048];
+    std::fstream fout_csv;
+    //
+    std::string solQual_csv = pathPrefix + "_solQual.csv";
+    fout_csv.open(solQual_csv, std::ios::out);
+    fout_csv << "numIter,dualSol,primalSol" << "\n";
+    for (int i = 0; i < numIters; i++) {
+        sprintf(row, "%d,%f,%f", i, dualSols[i], primalSols[i]);
+        fout_csv << row << "\n";
+    }
+    fout_csv.close();
+    //
+    std::string subProbSolWallT_csv = pathPrefix + "_subProbSolWallT.csv";
+    fout_csv.open(subProbSolWallT_csv, std::ios::out);
+    fout_csv << "numIter,a,e,elapsedWallT" << "\n";
+    int inum, a, e;
+    double elapsedWallT;
+    for (iiidTup ele: subProbSolwallTs) {
+        std::tie(inum, a, e, elapsedWallT) = ele;
+        sprintf(row, "%d,%d,%d,%f", inum, a, e, elapsedWallT);
+        fout_csv << row << "\n";
+    }
+    fout_csv.close();
+    
     return bestSol;
 }
 
-void LRH::updateLMs() {
+bool LRH::updateLMs() {
     //
     // Update the step isze first!
     //
@@ -46,6 +102,8 @@ void LRH::updateLMs() {
         // Better solution
         L_V_star = L_V;
         noUpdateCounter_L = 0;
+        //
+        bestSol->gap = (L_V_star - F_V_star) / F_V_star;
     } else {
         // No improvement
         noUpdateCounter_L += 1;
@@ -68,54 +126,78 @@ void LRH::updateLMs() {
             }
         }
     }
-    double at = numerator / denominator2;
     //
     // Update multipliers
     //
-    for (int a: prob->A) {
-        for (int e: prob->E_a[a]) {
-            for (int k: prob->K_ae[a][e]) {
-                double sumX = 0.0;
-                for (int j: prob->N_ae[a][e]) {
-                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+    
+    
+//    char note[2048];
+//    std::cout << "\n";
+    double at;
+    if (denominator2 != 0) {
+        at = numerator / denominator2;
+        for (int a: prob->A) {
+            for (int e: prob->E_a[a]) {
+                for (int k: prob->K_ae[a][e]) {
+                    double sumX = 0.0;
+                    for (int j: prob->N_ae[a][e]) {
+                        sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+                    }
+                    double lm = lrh_l_aek[a][e][k] + at * (lrh_y_ak[a][k] - lrh_z_aek[a][e][k] - sumX);
+                    lrh_l_aek[a][e][k] = lm < 0.0 ? 0.0 : lm;
+//                    sprintf(note, "%d; (%d,%d,%d): %e", numIters, a, e, k, lrh_l_aek[a][e][k]);
+//                    std::cout << note << "\n";
                 }
-                double lm = lrh_l_aek[a][e][k] + at * (lrh_y_ak[a][k] - lrh_z_aek[a][e][k] - sumX);
-                lrh_l_aek[a][e][k] = lm < 0.0 ? 0.0 : lm;
             }
         }
+    } else {
+        at = 0.0;
     }
-    logging("updateLMs",
-            " ", " ", " ", " ",
-            "at: " + std::to_string(at) +"  ut: " + std::to_string(at));
+    if (logPath != "") {
+        logging("updateLMs",
+        " ", " ", " ", " ",
+        "at: " + std::to_string(at) +"  ut: " + std::to_string(ut));
+    }
+    if (at == 0.0) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void LRH::solve_dualProblem() {
     L1_V = 0.0; L2_V = 0.0;
     //
     solve_etaModel();
-    logging("solve_etaModel",
-            " ", " ", " ", " ",
-            "L1V: " + std::to_string(L1_V));
+    if (logPath != "") {
+        logging("solve_etaModel",
+        " ", " ", " ", " ",
+        "L1V: " + std::to_string(L1_V));
+    }
     solve_rutModels();
-    logging("solve_rutModels",
-            " ", " ", " ", " ",
-            "L2V: " + std::to_string(L2_V));
+    if (logPath != "") {
+        logging("solve_rutModels",
+        " ", " ", " ", " ",
+        "L2V: " + std::to_string(L2_V));
+    }
     L_V = L1_V + L2_V;
-    if (numIters == 0) {
-        logging("solveDuals",
-                "inf", std::to_string(L_V), " ", " ",
-                " ");
-    } else {
-        logging("solve_dualProblem",
-                std::to_string(L_V_star), std::to_string(L_V),
-                " ", " ",
-                " ");
+    if (logPath != "") {
+        if (numIters == 0) {
+            logging("solveDuals",
+                    "inf", std::to_string(L_V), " ", " ",
+                    " ");
+        } else {
+            logging("solve_dualProblem",
+                    std::to_string(L_V_star), std::to_string(L_V),
+                    " ", " ",
+                    " ");
+        }
     }
 }
 
 void LRH::build_etaModel() {
-    eta_y_ak = Base::gen_y_ak(prob, env, 'I');
-    eta_z_aek = Base::gen_z_aek(prob, env, 'I');
+    eta_y_ak = BaseMM::gen_y_ak(prob, env, 'I');
+    eta_z_aek = BaseMM::gen_z_aek(prob, env, 'I');
     //
     etaModel = new IloModel(env);
     //
@@ -123,7 +205,7 @@ void LRH::build_etaModel() {
     etaModel->add(IloMinimize(env, objF));
     objF.end();
     //
-    Base::def_ETA_cnsts(prob, env, eta_y_ak, eta_z_aek, etaModel);
+    BaseMM::def_ETA_cnsts(prob, env, eta_y_ak, eta_z_aek, etaModel);
     //
     etaCplex = new IloCplex(*etaModel);
     etaCplex->setOut(env.getNullStream());
@@ -177,122 +259,91 @@ void LRH::solve_etaModel() {
 }
 
 void LRH::build_rutModels() {
-    std::vector<std::string> cut_names {"hSE", "hCA", "hRS", "hIP"};
-    IloCplex::CutManagement cutManagerType = IloCplex::UseCutForce;
-    IloBool isLocalCutAdd = IloFalse;
-    //
-    rmm::RouteMM *rutMM;
-    rmm::BnC *bncMM;
+    RouterSCD *rut;
+    unsigned long rut_time_limit_sec = time_limit_sec;
     for (int a: prob->A) {
-        std::vector<rmm::RouteMM*> a_rutMMs;
-        std::vector<rmm::BnC*> a_BnCs;
+        std::vector<RouterSCD*> a_routers;
         std::vector<double**> a_x_ij;
         std::vector<double*> a_u_i;
         for (int e: prob->E_a[a]) {
+            std::string rutLogPath = "";
+            std::string rutLpLogPath = "";
+            if (logPath != "") {
+                rutLogPath += logPath.substr(0, logPath.find_last_of("."));
+                rutLogPath += "_" + std::to_string(a) + std::to_string(e);
+                rutLogPath += ".log";
+                //
+                rutLpLogPath += logPath.substr(0, logPath.find_last_of("."));
+                rutLpLogPath += "_" + std::to_string(a) + std::to_string(e);
+                rutLpLogPath += ".lp";
+            }
             if (_ROUTER == "ILP") {
-                rutMM = new rmm::ILP(prob->RP_ae[a][e], "", true);
-                a_rutMMs.push_back(rutMM);
-            } else if (_ROUTER == "BnC") {
-                bncMM = new rmm::BnC(prob->RP_ae[a][e], "", cut_names, true, cutManagerType, isLocalCutAdd, tt);
-                rutMM = bncMM;
-                a_rutMMs.push_back(rutMM);
-                a_BnCs.push_back(bncMM);
+                rut = new RouterILP(prob, tt, rut_time_limit_sec,
+                                    a, e, lrh_l_aek,
+                                    rutLogPath, rutLpLogPath);
+            } else if (_ROUTER.rfind("BnC", 0) == 0) {
+                std::string tmp("BnC");
+                std::string option = _ROUTER.substr(tmp.size(), _ROUTER.size());
+                bool turOnCutPool = option == "oc";
+                rut = new RouterBnC(prob, tt, rut_time_limit_sec,
+                                    a, e, lrh_l_aek,
+                                    rutLogPath, rutLpLogPath, turOnCutPool);
+            } else if (_ROUTER == "GH") {
+                rut = new RouterGH(prob, tt, rut_time_limit_sec,
+                                   a, e, lrh_l_aek,
+                                   rutLogPath);
             } else {
                 throw "a undefied router is requested";
             }
-            rutMM->cplex->setWarning(rutMM->env.getNullStream());
-            if (turnOnInitSol) {
-                double **x_ij = new double*[prob->RP_ae[a][e]->N.size()];
-                double *u_i = new double[prob->RP_ae[a][e]->N.size()];
-                for (int i: prob->RP_ae[a][e]->N) {
-                    x_ij[i] = new double[prob->RP_ae[a][e]->N.size()];
-                    for (int j: prob->RP_ae[a][e]->N) {
-                        x_ij[i][j] = 0.0;
-                    }
-                    u_i[i] = 0;
-                }
-                a_x_ij.push_back(x_ij);
-                a_u_i.push_back(u_i);
-            }
+            a_routers.push_back(rut);;
         }
-        rutMMs.push_back(a_rutMMs);
-        if (_ROUTER == "BnC") {
-            rutBnCs.push_back(a_BnCs);
-        }
-        if (turnOnInitSol) {
-            rut_x_ij.push_back(a_x_ij);
-            rut_u_i.push_back(a_u_i);
-        }
-    }
-}
-
-void LRH::update_rutMM(int a, int e) {
-    rmm::RouteMM *rutMM = rutMMs[a][e];
-    IloExpr objF(rutMM->env);
-    int k = 0;
-    for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
-        int j = prob->RP_ae[a][e]->n_k[k];
-        for (int i: prob->RP_ae[a][e]->N) {
-            objF += -lrh_l_aek[a][e][*it] * rutMM->x_ij[i][j];
-        }
-        k++;
-    }
-    rutMM->cplex->getObjective().setExpr(objF);
-    if (rutMM->cplex->getObjective().getSense() != IloObjective::Minimize) {
-        rutMM->cplex->getObjective().setSense(IloObjective::Minimize);
-    }
-    objF.end();
-    //
-    if (turnOnInitSol) {
-        rutMM->set_initSol(rut_x_ij[a][e], rut_u_i[a][e]);
+        routers.push_back(a_routers);
     }
 }
 
 void LRH::solve_rutModels() {
-    rmm::RouteMM *rutMM;
-    rmm::BnC *bncMM;
+    std::vector<std::shared_future<void>> threadJobs;
+
+    
+    auto solve_a_rutModel = [](int numIters, RouterSCD* rut, std::vector<iiidTup> *vec, std::string &pathPrefix) {
+        double start = rut->tt->get_elapsedTimeWall();
+        rut->update();
+        
+        char fpath[2048];
+        sprintf(fpath, "%s_a%02d-e%02d-ni%02d.lp", pathPrefix.c_str(), rut->a, rut->e, numIters);
+        rut->rutCplex->exportModel(fpath);
+        
+        rut->run();
+        double elapsedTime = rut->tt->get_elapsedTimeWall() - start;
+        std::unique_lock<std::mutex> lock(lrh_mtx_vec);
+        vec->push_back(std::make_tuple(numIters, rut->a, rut->e, elapsedTime));
+    };
     for (int a: prob->A) {
         for (int e: prob->E_a[a]) {
-            update_rutMM(a, e);
-            if (_ROUTER == "BnC" && turOnCutPool) {
-                bncMM = rutBnCs[a][e];
-                bncMM->add_detectedCuts2MM();
-            }
-            rutMM = rutMMs[a][e];
-            rutMM->cplex->solve();
-            if (rutMM->cplex->getStatus() == IloAlgorithm::Infeasible) {
-                rutMM->cplex->exportModel(lpPath.c_str());
-                throw "the rutMM is infeasible";
-            }
-            if (rutMM->cplex->getStatus() == IloAlgorithm::Optimal) {
-                L2_V += -rutMM->cplex->getObjValue();
-                double x, u;
-                for (int rutID0: prob->RP_ae[a][e]->N) {
-                    int scdID0 = prob->rutID_scdID_ae[a][e][rutID0];
-                    for (int rutID1: prob->RP_ae[a][e]->N) {
-                        int scdID1 = prob->rutID_scdID_ae[a][e][rutID1];
-                        x = rutMM->cplex->getValue(rutMM->x_ij[rutID0][rutID1]);
-                        lrh_x_aeij[a][e][scdID0][scdID1] = x;
-                        if (turnOnInitSol) {
-                            rut_x_ij[a][e][rutID0][rutID1] = x;
-                        }
-                    }
-                    u = rutMM->cplex->getValue(rutMM->u_i[rutID0]);
-                    lrh_u_aei[a][e][scdID0] = u;
-                    if (turnOnInitSol) {
-                        rut_u_i[a][e][rutID0] = u;
-                    }
+            std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(solve_a_rutModel, numIters, routers[a][e], &subProbSolwallTs, pathPrefix);
+            threadJobs.push_back(returnValue);
+        }
+    }
+    std::for_each(threadJobs.begin(), threadJobs.end(), [](std::shared_future<void> x){
+        x.get();});
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            L2_V += -routers[a][e]->rut_objV;
+            for (int rutID0: prob->RP_ae[a][e]->N) {
+                int scdID0 = prob->rutID_scdID_ae[a][e][rutID0];
+                for (int rutID1: prob->RP_ae[a][e]->N) {
+                    int scdID1 = prob->rutID_scdID_ae[a][e][rutID1];
+                    lrh_x_aeij[a][e][scdID0][scdID1] = routers[a][e]->rut_x_ij[rutID0][rutID1];
                 }
-            } else {
-                throw "the rutMM is not solved optimally";
+                lrh_u_aei[a][e][scdID0] = routers[a][e]->rut_u_i[rutID0];
             }
         }
     }
 }
 
 void LRH::build_pexModel() {
-    pex_y_ak = Base::gen_y_ak(prob, env, 'I');
-    pex_z_aek = Base::gen_z_aek(prob, env, 'I');
+    pex_y_ak = BaseMM::gen_y_ak(prob, env, 'I');
+    pex_z_aek = BaseMM::gen_z_aek(prob, env, 'I');
     //
     pexModel = new IloModel(env);
     //
@@ -308,7 +359,7 @@ void LRH::build_pexModel() {
     pexModel->add(IloMaximize(env, objF));
     objF.end();
     //
-    Base::def_ETA_cnsts(prob, env, pex_y_ak, pex_z_aek, pexModel);
+    BaseMM::def_ETA_cnsts(prob, env, pex_y_ak, pex_z_aek, pexModel);
     char buf[DEFAULT_BUFFER_SIZE];
     IloExpr linExpr(env);
     for (int a : prob->A) {
@@ -386,29 +437,30 @@ void LRH::solve_pexModel() {
                     }
                 }
             }
+            bestSol->lastUpdatedIter = numIters;
         }
     } else {
         throw "the pexCplex is not solved optimally";
     }
-    logging("solve_pexModel",
-            " ", " ",
-            std::to_string(F_V_star), std::to_string(F_V),
-            " ");
+    if (logPath != "") {
+        logging("solve_pexModel",
+        " ", " ",
+        std::to_string(F_V_star), std::to_string(F_V),
+        " ");
+    }
 }
 
 void LRH::logging(std::string indicator,
                   std::string _L_V_star, std::string _L_V, std::string _F_V_star, std::string _F_V,
                   std::string note) {
-    if (logPath != "") {
-        std::string _log(std::to_string(numIters) +
-                    "," + std::to_string(tt->get_elapsedTimeWall()) +
-                     "," + std::to_string(tt->get_elapsedTimeCPU()));
-        std::vector<std::string> tempVec {indicator, _L_V_star, _L_V, _F_V_star, _F_V, note};
-        for (std::string str: tempVec) {
-            _log += "," + str;
-        }
-        char log[_log.size() + 1];
-        std::strcpy(log, _log.c_str());
-        appendRow(logPath, log);
+    std::string _log(std::to_string(numIters) +
+                "," + std::to_string(tt->get_elapsedTimeWall()) +
+                 "," + std::to_string(tt->get_elapsedTimeCPU()));
+    std::vector<std::string> tempVec {indicator, _L_V_star, _L_V, _F_V_star, _F_V, note};
+    for (std::string str: tempVec) {
+        _log += "," + str;
     }
+    char log[_log.size() + 1];
+    std::strcpy(log, _log.c_str());
+    appendRow(logPath, log);
 }

@@ -6,9 +6,10 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Base.hpp"
+#include "../../include/BaseMM.hpp"
 
 Solution* ILP::solve() {
+    baseCplex->setParam(IloCplex::TiLim, time_limit_sec);
     baseCplex->solve();
     //
     Solution *sol = new Solution(prob);
@@ -21,7 +22,7 @@ Solution* ILP::solve() {
     sol->wallT = tt->get_elapsedTimeWall();
     char note[2048];
     sprintf(note,
-            "\"{numRows: %ld,numCols: %ld}\"",
+            "\"{\'numRows\': %ld, \'numCols\': %ld}\"",
             baseCplex->getNrows(),
             baseCplex->getNcols());
     sol->note = std::string(note);

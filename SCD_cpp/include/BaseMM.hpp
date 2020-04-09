@@ -6,29 +6,33 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#ifndef Base_hpp
-#define Base_hpp
+#ifndef BaseMM_hpp
+#define BaseMM_hpp
 
 #include <cfloat>
 #include <math.h>
+#include <tuple>
 
 #include <ilcplex/ilocplex.h>
 
+#include "SolApprBase.hpp"
+#include "RouterSCD.hpp"
 #include "Problem.hpp"
 #include "Solution.hpp"
 
 #include "ck_route/CutBase.hpp"     // from BnC_CPLEX
-#include "ck_route/RouteMM.hpp"     // from BnC_CPLEX
+#include "ck_route/Router.hpp"     // from BnC_CPLEX
 #include "ck_util/util.hpp"         // from util
 
 
 #define DEFAULT_BUFFER_SIZE 2048
+typedef std::tuple<int, int, int, double> iiidTup;
+typedef std::tuple<int, double> idTup;
 
-class Base {
+class BaseMM : public SolApprBase {
 public:
-    Problem *prob;
-    std::string logPath, lpPath;
-    TimeTracker *tt;
+    std::string lpPath;
+    std::string pathPrefix;
     //
     IloEnv env;
     IloModel *baseModel;
@@ -37,16 +41,14 @@ public:
     IloRangeArray *COM_cnsts;
     long ***COM_cnsts_index;
     //
-    Base(Problem *prob, std::string logPath, std::string lpPath, TimeTracker *tt, char vType) {
-        this->prob = prob;
-        this->logPath = logPath;
+    BaseMM(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec, int numThreads, std::string logPath, std::string lpPath, char vType): SolApprBase(prob, tt, time_limit_sec, numThreads, logPath) {
         this->lpPath = lpPath;
-        this->tt = tt;
+        this->pathPrefix = lpPath.substr(0, lpPath.find(".lp"));
         //
-        y_ak = Base::gen_y_ak(prob, env, vType);
-        z_aek = Base::gen_z_aek(prob, env, vType);
-        x_aeij = Base::gen_x_aeij(prob, env, vType);
-        u_aei = Base::gen_u_aei(prob, env);
+        y_ak = BaseMM::gen_y_ak(prob, env, vType);
+        z_aek = BaseMM::gen_z_aek(prob, env, vType);
+        x_aeij = BaseMM::gen_x_aeij(prob, env, vType);
+        u_aei = BaseMM::gen_u_aei(prob, env);
         COM_cnsts = new IloRangeArray(env);
         COM_cnsts_index = new long**[prob->A.size()];
         for (int a : prob->A) {
@@ -61,7 +63,7 @@ public:
         baseCplex = new IloCplex(*baseModel);
         baseCplex->setOut(env.getNullStream());
     }
-    ~Base() {
+    ~BaseMM() {
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
                 for (int i = 0; i < prob->cN.size(); i++) {
@@ -75,9 +77,6 @@ public:
         //
         delete baseCplex;
         delete baseModel;
-    }
-    virtual Solution* solve() {
-        throw "Should override solve()";
     }
     static IloNumVar** gen_y_ak(Problem *prob, IloEnv &env, char vType) {
         IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
@@ -183,6 +182,26 @@ public:
                 }
             }
         }
+        //
+        for (int a: prob->A) {
+            linExpr.clear();
+            sprintf(buf, "VL(%d)", a);  // Volume Limit
+            for (int k: prob->K) {
+                linExpr += prob->v_k[k] * y_ak[a][k];
+            }
+            cnsts.add(linExpr <= prob->v_a[a]);
+            cnsts[cnsts.getSize() - 1].setName(buf);
+        }
+        //
+        for (int a: prob->A) {
+            linExpr.clear();
+            sprintf(buf, "WL(%d)", a);  // Weight Limit
+            for (int k: prob->K) {
+                linExpr += prob->w_k[k] * y_ak[a][k];
+            }
+            cnsts.add(linExpr <= prob->w_a[a]);
+            cnsts[cnsts.getSize() - 1].setName(buf);
+        }
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
                 for (int k: prob->K) {
@@ -207,23 +226,23 @@ protected:
     void def_COM_cnsts();
 };
     
-class ILP : public Base {
+class ILP : public BaseMM {
 public:
-    ILP(Problem *prob, std::string logPath, std::string lpPath, TimeTracker *tt) : Base(prob, logPath, lpPath, tt, 'I') {
+    ILP(Problem *prob, TimeTracker *tt,
+        unsigned long time_limit_sec, int numThreads,
+        std::string logPath, std::string lpPath) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, 'I') {
         this->lpPath = lpPath;
     }
     ~ILP() {
     }
     Solution* solve();
 };
-    
-class LRH : public Base {
+
+class LRH : public BaseMM {
 public:
     std::string _ROUTER;
     double STEP_DECREASE_RATE, DUAL_GAP_LIMIT;
     unsigned int NO_IMPROVEMENT_LIMIT, NUM_ITER_LIMIT;
-    unsigned long TIME_LIMIT_SEC;
-    bool turnOnInitSol, turOnCutPool;
     //
     double L1_V, L2_V, L_V, L_V_star, F_V, F_V_star;
     double ut;
@@ -237,25 +256,21 @@ public:
     IloNumVar **pex_y_ak, ***pex_z_aek;
     IloRangeArray *pex_COM_cnsts;
     long ***pex_COM_cnsts_index;
-    std::vector<std::vector<rmm::RouteMM*>> rutMMs;
-    std::vector<std::vector<rmm::BnC*>> rutBnCs;
-    std::vector<std::vector<double**>> rut_x_ij;
-    std::vector<std::vector<double*>> rut_u_i;
+    std::vector<std::vector<RouterSCD*>> routers;
     //
     Solution *bestSol;
+    std::vector<iiidTup> subProbSolwallTs;
+    std::vector<double> dualSols, primalSols;
     //
-    LRH(Problem *prob, std::string logPath, std::string lpPath, TimeTracker *tt,
+    LRH(Problem *prob, TimeTracker *tt,
+        unsigned long time_limit_sec, int numThreads,
+        std::string logPath, std::string lpPath,
         std::string _router,
-        double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit,
-        unsigned long time_limit_sec,
-        bool turnOnInitSol, bool turOnCutPool) : Base(prob, logPath, lpPath, tt, 'C') {
+        double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, 'C') {
         _ROUTER = _router;
         DUAL_GAP_LIMIT = dual_gap_limit;
         NUM_ITER_LIMIT = num_iter_limit;
         NO_IMPROVEMENT_LIMIT = no_improvement_limit;
-        TIME_LIMIT_SEC = time_limit_sec;
-        this->turnOnInitSol = turnOnInitSol;
-        this->turOnCutPool = turOnCutPool;
         L_V_star = DBL_MAX; F_V_star = -DBL_MAX;
         STEP_DECREASE_RATE = 0.5;
         ut = 2.0;
@@ -310,7 +325,7 @@ public:
         bestSol = nullptr;
         //
         if (logPath != "") {
-            std::string _header("wallT,cpuT,Iteration,Function,L_V*,L_V,F_V*,F_V,Note");
+            std::string _header("Iteration,wallT,cpuT,Function,L_V*,L_V,F_V*,F_V,Note");
             char header[_header.size() + 1];
             std::strcpy(header, _header.c_str());
             createCSV(logPath, header);
@@ -326,14 +341,7 @@ public:
                 delete [] eta_z_aek[a][e];
                 delete [] pex_z_aek[a][e];
                 delete [] pex_COM_cnsts_index[a][e];
-                delete rutMMs[a][e];
-                if (turnOnInitSol) {
-                    for (int i: prob->RP_ae[a][e]->N) {
-                        delete [] rut_x_ij[a][e][i];
-                    }
-                    delete [] rut_x_ij[a][e];
-                    delete [] rut_u_i[a][e];
-                }
+                delete routers[a][e];
             }
             delete [] lrh_y_ak[a]; delete [] lrh_z_aek[a]; delete [] lrh_x_aeij[a]; delete [] lrh_l_aek[a];
             delete [] eta_y_ak[a]; delete [] eta_z_aek[a];
@@ -349,13 +357,13 @@ public:
         delete pexCplex; delete pexModel;
         delete pex_COM_cnsts;
         env.end();
-        rutMMs.clear(); rutBnCs.clear(); rut_x_ij.clear(); rut_u_i.clear();
+        routers.clear();
     }
     //
     Solution* solve();
 private:
     void solve_dualProblem();
-    void updateLMs();
+    bool updateLMs();
     //
     void build_etaModel();
     void update_etaModel();

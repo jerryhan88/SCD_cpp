@@ -20,6 +20,7 @@ public:
     double objV, gap;
     double cpuT, wallT;
     std::string note;
+    int lastUpdatedIter;
     //
     double **y_ak, ***z_aek, ****x_aeij, ***u_aei;
     //
