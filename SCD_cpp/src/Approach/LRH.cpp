@@ -6,23 +6,17 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/BaseMM.hpp"
+#include "../../include/Solver.hpp"
 
 
 std::mutex lrh_mtx_vec;
 
 Solution* LRH::solve() {
     baseCplex->solve();
-    
-//    char tmp[2048];
-//    std::cout << "\n";
-    
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K_ae[a][e]) {
                 lrh_l_aek[a][e][k] = baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]);
-//                sprintf(tmp, "-1; (%d,%d,%d): %e", a, e, k, lrh_l_aek[a][e][k]);
-//                std::cout << tmp << "\n";
             }
         }
     }
@@ -31,10 +25,16 @@ Solution* LRH::solve() {
         " ", " ", " ", " ",
         " ");
     }
+    std::cout << "\t" << "The LP model has been solved " << tt->get_curTime();
     //
     int terminationCon = -1;
     while (tt->get_elapsedTimeWall() < time_limit_sec) {
-        solve_dualProblem();
+        try {
+            solve_dualProblem();
+        } catch (const char * str) {
+            std::cout << "Exception: " << str << std::endl;
+            break;
+        }
         dualSols.push_back(L_V);
         //
         solve_pexModel();
@@ -45,6 +45,7 @@ Solution* LRH::solve() {
             " ", " ", " ", " ",
             "Dual Gap: " + std::to_string(bestSol->gap));
         }
+        std::cout << "\t" << numIters << "th iter finished; " << tt->get_curTime();
         if (NUM_ITER_LIMIT == ++numIters) {
             terminationCon = 0;
             break;
@@ -196,8 +197,8 @@ void LRH::solve_dualProblem() {
 }
 
 void LRH::build_etaModel() {
-    eta_y_ak = BaseMM::gen_y_ak(prob, env, 'I');
-    eta_z_aek = BaseMM::gen_z_aek(prob, env, 'I');
+    eta_y_ak = gen_y_ak(prob, env, 'I');
+    eta_z_aek = gen_z_aek(prob, env, 'I');
     //
     etaModel = new IloModel(env);
     //
@@ -308,10 +309,12 @@ void LRH::solve_rutModels() {
     auto solve_a_rutModel = [](int numIters, RouterSCD* rut, std::vector<iiidTup> *vec, std::string &pathPrefix) {
         double start = rut->tt->get_elapsedTimeWall();
         rut->update();
-        
-        char fpath[2048];
-        sprintf(fpath, "%s_a%02d-e%02d-ni%02d.lp", pathPrefix.c_str(), rut->a, rut->e, numIters);
-        rut->rutCplex->exportModel(fpath);
+//        if (rut->a == 0 && rut->e == 0) {
+//            std::cout << 12;
+//        }
+//        char fpath[2048];
+//        sprintf(fpath, "%s_a%02d-e%02d-ni%02d.lp", pathPrefix.c_str(), rut->a, rut->e, numIters);
+//        rut->rutCplex->exportModel(fpath);
         
         rut->run();
         double elapsedTime = rut->tt->get_elapsedTimeWall() - start;
@@ -341,106 +344,36 @@ void LRH::solve_rutModels() {
     }
 }
 
-void LRH::build_pexModel() {
-    pex_y_ak = BaseMM::gen_y_ak(prob, env, 'I');
-    pex_z_aek = BaseMM::gen_z_aek(prob, env, 'I');
-    //
-    pexModel = new IloModel(env);
-    //
-    IloExpr objF(env);
-    for (int k: prob->K) {
-        for (int a : prob->A) {
-            objF += prob->r_k[k] * pex_y_ak[a][k];
-            for (int e: prob->E_a[a]) {
-                objF -= prob->r_k[k] * prob->p_ae[a][e] * pex_z_aek[a][e][k];
-            }
-        }
-    }
-    pexModel->add(IloMaximize(env, objF));
-    objF.end();
-    //
-    BaseMM::def_ETA_cnsts(prob, env, pex_y_ak, pex_z_aek, pexModel);
-    char buf[DEFAULT_BUFFER_SIZE];
-    IloExpr linExpr(env);
-    for (int a : prob->A) {
-        for (int e: prob->E_a[a]) {
-            for (int k: prob->K_ae[a][e]) {
-                linExpr.clear();
-                sprintf(buf, "CC(%d)(%d)(%d)", a, e, k);
-                linExpr += pex_y_ak[a][k];
-                double sumX = 0.0;
-                for (int j: prob->N_ae[a][e]) {
-                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
-                }
-                linExpr -= pex_z_aek[a][e][k];
-                pex_COM_cnsts->add(linExpr <= sumX);
-                (*pex_COM_cnsts)[pex_COM_cnsts->getSize() - 1].setName(buf);
-                pex_COM_cnsts_index[a][e][k] = pex_COM_cnsts->getSize() - 1;
-            }
-        }
-    }
-    linExpr.end();
-    pexModel->add(*pex_COM_cnsts);
-    pexCplex = new IloCplex(*pexModel);
-    pexCplex->setOut(env.getNullStream());
-    pexCplex->setWarning(env.getNullStream());
-}
-
-void LRH::update_pexModel() {
-    IloExpr linExpr(env);
-    for (int a : prob->A) {
-        for (int e: prob->E_a[a]) {
-            for (int k: prob->K_ae[a][e]) {
-                long cnsts_id = pex_COM_cnsts_index[a][e][k];
-                double sumX = 0.0;
-                for (int j: prob->N_ae[a][e]) {
-                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
-                }
-                (*pex_COM_cnsts)[cnsts_id].setUB(sumX);
-            }
-        }
-    }
-}
-
 void LRH::solve_pexModel() {
-    update_pexModel();
-    pexCplex->solve();
-    if (pexCplex->getStatus() == IloAlgorithm::Infeasible) {
-        pexCplex->exportModel(lpPath.c_str());
-        throw "the pexCplex is infeasible";
-    }
-    if (pexCplex->getStatus() == IloAlgorithm::Optimal) {
-        F_V = pexCplex->getObjValue();
-        if (F_V > F_V_star) {
-            F_V_star = F_V;
-            if (bestSol != nullptr) {
-                delete bestSol;
-            }
-            bestSol = new Solution(prob);
-            bestSol->objV = F_V_star;
-            bestSol->gap = ((L_V > L_V_star ? L_V_star : L_V) - F_V_star) / F_V_star;
-            bestSol->cpuT = tt->get_elapsedTimeCPU();
-            bestSol->wallT = tt->get_elapsedTimeWall();
-            for (int a: prob->A) {
-                for (int k: prob->K) {
-                    bestSol->y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
-                }
-                for (int e: prob->E_a[a]) {
-                    for (int k: prob->K) {
-                        bestSol->z_aek[a][e][k] = pexCplex->getValue(pex_z_aek[a][e][k]);
-                    }
-                    for (int i: prob->N_ae[a][e]) {
-                        for (int j: prob->N_ae[a][e]) {
-                            bestSol->x_aeij[a][e][i][j] = lrh_x_aeij[a][e][i][j];
-                        }
-                        bestSol->u_aei[a][e][i] = lrh_u_aei[a][e][i];
-                    }
-                }
-            }
-            bestSol->lastUpdatedIter = numIters;
+    pex->solve(lrh_x_aeij, lrh_u_aei);
+    F_V = pex->F_V;
+    if (F_V > F_V_star) {
+        F_V_star = F_V;
+        if (bestSol != nullptr) {
+            delete bestSol;
         }
-    } else {
-        throw "the pexCplex is not solved optimally";
+        bestSol = new Solution(prob);
+        bestSol->objV = F_V_star;
+        bestSol->gap = ((L_V > L_V_star ? L_V_star : L_V) - F_V_star) / F_V_star;
+        bestSol->cpuT = tt->get_elapsedTimeCPU();
+        bestSol->wallT = tt->get_elapsedTimeWall();
+        for (int a: prob->A) {
+            for (int k: prob->K) {
+                bestSol->y_ak[a][k] = pex->y_ak[a][k];
+            }
+            for (int e: prob->E_a[a]) {
+                for (int k: prob->K) {
+                    bestSol->z_aek[a][e][k] = pex->z_aek[a][e][k];
+                }
+                for (int i: prob->N_ae[a][e]) {
+                    for (int j: prob->N_ae[a][e]) {
+                        bestSol->x_aeij[a][e][i][j] = pex->x_aeij[a][e][i][j];
+                    }
+                    bestSol->u_aei[a][e][i] = pex->u_aei[a][e][i];
+                }
+            }
+        }
+        bestSol->lastUpdatedIter = numIters;
     }
     if (logPath != "") {
         logging("solve_pexModel",

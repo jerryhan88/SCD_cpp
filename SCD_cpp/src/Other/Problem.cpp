@@ -10,6 +10,124 @@
 
 #include <iostream>
 
+double** new_dbl_ak(Problem *prob) {
+    size_t numAgents, numTasks;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    //
+    double **dbl_ak = new double*[numAgents];
+    for (int a: prob->A) {
+        dbl_ak[a] = new double[numTasks];
+        for (int k: prob->K) {
+            dbl_ak[a][k] = 0.0;
+        }
+    }
+    return dbl_ak;
+}
+
+double*** new_dbl_aek(Problem *prob) {
+    size_t numAgents, numTasks, numRR;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    //
+    double ***dbl_aek = new double**[numAgents];
+    for (int a: prob->A) {
+        numRR = prob->E_a[a].size();
+        dbl_aek[a] = new double*[numRR];
+        for (int e: prob->E_a[a]) {
+            dbl_aek[a][e] = new double[numTasks];
+            for (int k: prob->K) {
+                dbl_aek[a][e][k] = 0.0;
+            }
+        }
+    }
+    return dbl_aek;
+}
+
+double**** new_dbl_aeij(Problem *prob) {
+    size_t numAgents, numTasks, numNodes, numRR;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    numNodes = prob->cN.size();
+    //
+    double ****dbl_aeij = new double***[numAgents];
+    for (int a: prob->A) {
+        numRR = prob->E_a[a].size();
+        dbl_aeij[a] = new double**[numRR];
+        for (int e: prob->E_a[a]) {
+            dbl_aeij[a][e] = new double*[numNodes];
+            for (int i = 0; i < numNodes; i++) {
+                dbl_aeij[a][e][i] = new double[numNodes];
+                for (int j = 0; j < numNodes; j++) {
+                    dbl_aeij[a][e][i][j] = 0.0;
+                }
+            }
+        }
+    }
+    return dbl_aeij;
+}
+
+
+double*** new_dbl_aei(Problem *prob) {
+    size_t numAgents, numTasks, numNodes, numRR;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    numNodes = prob->cN.size();
+    //
+    double ***dbl_aei = new double**[numAgents];
+    for (int a: prob->A) {
+        numRR = prob->E_a[a].size();
+        dbl_aei[a] = new double*[numRR];
+        for (int e: prob->E_a[a]) {
+            dbl_aei[a][e] = new double[numNodes];
+            for (int i = 0; i < numNodes; i++) {
+                dbl_aei[a][e][i] = 0.0;
+            }
+        }
+    }
+    return dbl_aei;
+}
+
+void delete_dbl_ak(Problem *prob, double **dbl_ak) {
+    for (int a: prob->A) {
+        delete [] dbl_ak[a];
+    }
+    delete [] dbl_ak;
+}
+
+void delete_dbl_aek(Problem *prob, double ***dbl_aek) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] dbl_aek[a][e];
+        }
+        delete [] dbl_aek[a];
+    }
+    delete [] dbl_aek;
+}
+
+void delete_dbl_aeij(Problem *prob, double ****dbl_aeij) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i = 0; i < prob->cN.size(); i++) {
+                delete [] dbl_aeij[a][e][i];
+            }
+            delete [] dbl_aeij[a][e];
+        }
+        delete [] dbl_aeij[a];
+    }
+    delete [] dbl_aeij;
+}
+
+void delete_dbl_aei(Problem *prob, double ***dbl_aei) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] dbl_aei[a][e];
+        }
+        delete [] dbl_aei[a];
+    }
+    delete [] dbl_aei;
+}
+
 void Problem::gen_aeProbs() {
     //
     // Generate problem instances associated with routing problems by rearranging indices of parameters

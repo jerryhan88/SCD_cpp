@@ -1,12 +1,86 @@
 //
-//  Base.cpp
+//  SolApprBase.cpp
 //  SCD_cpp
 //
-//  Created by Chung-Kyun HAN on 17/2/20.
+//  Created by Chung-Kyun HAN on 13/4/20.
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/BaseMM.hpp"
+#include "../../include/SolApprBase.hpp"
+
+
+IloNumVar** gen_y_ak(Problem *prob, IloEnv &env, char vType) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloNumVar **y_ak = new IloNumVar*[prob->A.size()];
+    for (int a: prob->A) {
+        y_ak[a] = new IloNumVar[prob->K.size()];
+        for (int k: prob->K) {
+            sprintf(buf, "y(%d)(%d)", a, k);
+            y_ak[a][k] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+        }
+    }
+    return y_ak;
+}
+
+IloNumVar*** gen_z_aek(Problem *prob, IloEnv &env, char vType) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloNumVar ***z_aek = new IloNumVar**[prob->A.size()];
+    for (int a: prob->A) {
+        z_aek[a] = new IloNumVar*[prob->E_a[a].size()];
+        for (int e: prob->E_a[a]) {
+            z_aek[a][e] = new IloNumVar[prob->K.size()];
+            for (int k: prob->K) {
+                sprintf(buf, "z(%d)(%d)(%d)", a, e, k);
+                z_aek[a][e][k] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+            }
+        }
+    }
+    return z_aek;
+}
+
+IloNumVar**** gen_x_aeij(Problem *prob, IloEnv &env, char vType) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloNumVar ****x_aeij = new IloNumVar***[prob->A.size()];
+    for (int a: prob->A) {
+        x_aeij[a] = new IloNumVar**[prob->E_a[a].size()];
+        for (int e: prob->E_a[a]) {
+            x_aeij[a][e] = new IloNumVar*[prob->cN.size()];
+            for (int i = 0; i < prob->cN.size(); i++) {
+                x_aeij[a][e][i] = new IloNumVar[prob->cN.size()];
+            }
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    sprintf(buf, "x(%d)(%d)(%d)(%d)", a, e, i, j);
+                    x_aeij[a][e][i][j] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+                }
+            }
+            
+        }
+    }
+    return x_aeij;
+}
+
+IloNumVar*** gen_u_aei(Problem *prob, IloEnv &env) {
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloNumVar ***u_aei = new IloNumVar**[prob->A.size()];
+    for (int a: prob->A) {
+        u_aei[a] = new IloNumVar*[prob->E_a[a].size()];
+        for (int e: prob->E_a[a]) {
+            u_aei[a][e] = new IloNumVar[prob->cN.size()];
+            for (int i: prob->N_ae[a][e]) {
+                sprintf(buf, "u(%d)(%d)(%d)", a, e, i);
+                u_aei[a][e][i] = IloNumVar(env, 0.0, DBL_MAX, ILOFLOAT, buf);
+            }
+        }
+    }
+    return u_aei;
+}
 
 void BaseMM::build_baseModel() {
     def_objF();

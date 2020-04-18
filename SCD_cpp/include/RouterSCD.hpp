@@ -27,6 +27,7 @@ class RouterSCD {
 public:
     Problem *prob;
     TimeTracker *tt;
+    unsigned long time_limit_sec;
     rut::Problem *rutProb;
     int a, e;
     double ***lrh_l_aek;
@@ -35,9 +36,12 @@ public:
     //
     IloCplex *rutCplex;
     //
-    RouterSCD(Problem *prob, TimeTracker *tt, int a, int e, double ***lrh_l_aek) {
+    RouterSCD(Problem *prob, TimeTracker *tt,
+              unsigned long time_limit_sec,
+              int a, int e, double ***lrh_l_aek) {
         this->prob = prob;
         this->tt = tt;
+        this->time_limit_sec = time_limit_sec;
         rutProb = prob->RP_ae[a][e];
         this->a = a;
         this->e = e;
@@ -77,7 +81,7 @@ public:
     RouterILP(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
               double ***lrh_l_aek,
-              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, a, e, lrh_l_aek) {
+              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
         this->rutLogPath = rutLogPath;
         rutAlgo = new rmm::ILP(rutProb, tt, time_limit_sec, rutLogPath, rutLpLogPath, true);
         rutAlgo->cplex->setWarning(rutAlgo->env.getNullStream());
@@ -98,17 +102,19 @@ public:
     const IloBool isLocalCutAdd = IloFalse;
     //
     rmm::BnC *rutAlgo;
+    rgh::InsertionHeuristic* gh;
     bool turOnCutPool;
     //
     RouterBnC(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
               double ***lrh_l_aek,
               std::string rutLogPath, std::string rutLpLogPath,
-              bool turOnCutPool): RouterSCD(prob, tt, a, e, lrh_l_aek) {
+              bool turOnCutPool): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
         rutAlgo = new rmm::BnC(rutProb, tt, time_limit_sec, rutLogPath, rutLpLogPath, cut_names, true, cutManagerType, isLocalCutAdd);
         rutAlgo->cplex->setWarning(rutAlgo->env.getNullStream());
         this->turOnCutPool = turOnCutPool;
         this->rutCplex = rutAlgo->cplex;
+        gh = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
     }
     //
     void update();
@@ -122,7 +128,7 @@ public:
     RouterGH(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
             int a, int e,
             double ***lrh_l_aek,
-            std::string rutLogPath): RouterSCD(prob, tt, a, e, lrh_l_aek) {
+            std::string rutLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
         rutAlgo = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
     }
     //

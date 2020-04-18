@@ -17,8 +17,8 @@
 #include "include/Problem.hpp"
 #include "include/Solution.hpp"
 #include "include/SolApprBase.hpp"
-#include "include/BaseMM.hpp"
-#include "include/PureGH.hpp"
+//#include "include/BaseMM.hpp"
+#include "include/Solver.hpp"
 #include "include/ThreadPool.hpp"
 
 #include "ck_util/util.hpp"         // from util
@@ -106,8 +106,9 @@ int main(int argc, const char * argv[]) {
             sol = solAppr->solve();
         } else if (appr_name_base == "LRH") {
             std::vector<std::string> tokens = parseWithDelimiter(appr_name, "-");
-            assert (tokens.size() == 2);
+            assert (3 == tokens.size());
             std::string _router = tokens[1];
+            std::string _extractor = tokens[2];
             char buf[4096];
             std::ifstream is;
             std::string setting_fpath(appr_dpath + "/LRH_setting.txt");
@@ -147,7 +148,7 @@ int main(int argc, const char * argv[]) {
             solAppr = new LRH(prob, &tt,
                               time_limit_sec, numThreads,
                               fpo.logPath, fpo.lpPath,
-                              _router,
+                              _router, _extractor,
                               dual_gap_limit, num_iter_limit, no_improvement_limit);
             sol = solAppr->solve();
         } else if (appr_name_base == "PureGH") {

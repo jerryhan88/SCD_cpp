@@ -17,6 +17,18 @@
 #include "nlohmann/json.hpp"
 #include "ck_route/Other.hpp"     // from BnC_CPLEX
 
+class Problem;
+
+double** new_dbl_ak(Problem *prob);
+double*** new_dbl_aek(Problem *prob);
+double**** new_dbl_aeij(Problem *prob);
+double*** new_dbl_aei(Problem *prob);
+
+void delete_dbl_ak(Problem *prob, double **dbl_ak);
+void delete_dbl_aek(Problem *prob, double ***dbl_aek);
+void delete_dbl_aeij(Problem *prob, double ****dbl_aeij);
+void delete_dbl_aei(Problem *prob, double ***dbl_aei);
+
 class Problem {
 public:
     std::string problemName;
@@ -35,6 +47,7 @@ public:
     std::vector<std::vector<std::set<int>>> K_ae, P_ae, D_ae, PD_ae, N_ae;
     std::vector<std::vector<rut::Problem*>> RP_ae;
     std::vector<std::vector<std::map<int, int>>> scdID_rutID_ae, rutID_scdID_ae;
+    std::map<int, int> dp_k;
     //
     std::vector<int> cN;
     double **t_ij;
@@ -84,6 +97,7 @@ public:
         R_ae.clear(); K_ae.clear(); P_ae.clear(); D_ae.clear(); PD_ae.clear(); N_ae.clear();
         K.clear(); A.clear(); E_a.clear(); cN.clear();
         RP_ae.clear();
+        dp_k.clear();
     }
     
     void gen_aeProbs();
@@ -107,11 +121,16 @@ public:
         prob->h_k = new int[numTasks];
         prob->n_k = new int[numTasks];
         for (int k: prob->K) {
+            int pp = prob_json["h_k"][k];
+            int dp = prob_json["n_k"][k];
             prob->r_k[k] = prob_json["r_k"][k];
             prob->v_k[k] = prob_json["v_k"][k];
             prob->w_k[k] = prob_json["w_k"][k];
-            prob->h_k[k] = prob_json["h_k"][k];
-            prob->n_k[k] = prob_json["n_k"][k];
+            prob->h_k[k] = pp;
+            prob->n_k[k] = dp;
+            //
+            prob->dp_k[pp] = -1;
+            prob->dp_k[dp] = k;
         }
         //
         for (int a: prob_json["A"]) {
@@ -154,6 +173,7 @@ public:
                 std::set<int> aeK, aeP, aeD, aePD, aeN;
                 for (int i: prob_json["R_ae"][a][e]) {
                     aeR.push_back(i);
+                    prob->dp_k[i] = -1;
                 }
                 for (int i: prob_json["K_ae"][a][e]) {
                     aeK.insert(i);

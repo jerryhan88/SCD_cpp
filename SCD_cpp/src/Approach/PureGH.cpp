@@ -6,7 +6,7 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/PureGH.hpp"
+#include "../../include/Solver.hpp"
 
 std::vector <int> getIntersection(std::vector < std::vector <int> > &sets) {
     std::vector <int> result;  // To store the reaultant set
