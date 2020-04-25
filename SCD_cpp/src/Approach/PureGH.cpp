@@ -92,13 +92,19 @@ Solution* PureGH::solve() {
     while (!unSelectedTasks.empty()) {
         size_t sizeBefore = unSelectedTasks.size();
         //
-        std::vector<std::shared_future<void>> threadJobs;
-        for (Agent* agt: agents) {
-            std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(taskSelFunc, agt);
-            threadJobs.push_back(returnValue);
-        }
-        for (std::vector<std::shared_future<void>>::iterator it = threadJobs.begin(); it != threadJobs.end(); it++) {
-            (*it).get();
+        if (pool.getThreadCount() > 1) {
+            std::vector<std::shared_future<void>> threadJobs;
+            for (Agent* agt: agents) {
+                std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(taskSelFunc, agt);
+                threadJobs.push_back(returnValue);
+            }
+            for (std::vector<std::shared_future<void>>::iterator it = threadJobs.begin(); it != threadJobs.end(); it++) {
+                (*it).get();
+            }
+        } else {
+            for (Agent* agt: agents) {
+                taskSelFunc(agt);
+            }
         }
         //
         for (Agent* agt: agents) {

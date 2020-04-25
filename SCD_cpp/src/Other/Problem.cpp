@@ -45,9 +45,8 @@ double*** new_dbl_aek(Problem *prob) {
 }
 
 double**** new_dbl_aeij(Problem *prob) {
-    size_t numAgents, numTasks, numNodes, numRR;
+    size_t numAgents, numNodes, numRR;
     numAgents = prob->A.size();
-    numTasks = prob->K.size();
     numNodes = prob->cN.size();
     //
     double ****dbl_aeij = new double***[numAgents];
@@ -69,9 +68,8 @@ double**** new_dbl_aeij(Problem *prob) {
 
 
 double*** new_dbl_aei(Problem *prob) {
-    size_t numAgents, numTasks, numNodes, numRR;
+    size_t numAgents, numNodes, numRR;
     numAgents = prob->A.size();
-    numTasks = prob->K.size();
     numNodes = prob->cN.size();
     //
     double ***dbl_aei = new double**[numAgents];

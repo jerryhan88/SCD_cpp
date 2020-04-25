@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8F575BE42453D26D007BBE4D /* Allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F575BE32453D26D007BBE4D /* Allocator.cpp */; };
 		8F69CFF3242B4AFB0094C519 /* RouterSCD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */; };
 		8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FA66BBA2404BF2400CA0CCB /* LRH.cpp */; };
 		8FB3CCB6242DE25C005156D4 /* libsequencer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3CCB5242DE25C005156D4 /* libsequencer.a */; };
@@ -39,6 +40,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		8F575BE22453D255007BBE4D /* Allocator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Allocator.hpp; sourceTree = "<group>"; };
+		8F575BE32453D26D007BBE4D /* Allocator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Allocator.cpp; sourceTree = "<group>"; };
 		8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RouterSCD.cpp; sourceTree = "<group>"; };
 		8F69CFF4242B4B420094C519 /* RouterSCD.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = RouterSCD.hpp; sourceTree = "<group>"; };
 		8FA66BBA2404BF2400CA0CCB /* LRH.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LRH.cpp; sourceTree = "<group>"; };
@@ -107,6 +110,7 @@
 			children = (
 				8FB3CCB724308B50005156D4 /* SolApprBase.hpp */,
 				8FE160292444043A00630122 /* Solver.hpp */,
+				8F575BE22453D255007BBE4D /* Allocator.hpp */,
 				8F69CFF4242B4B420094C519 /* RouterSCD.hpp */,
 				8FE160272443F99D00630122 /* PrimalExtractor.hpp */,
 				8FC362322434A95F00B68635 /* ThreadPool.hpp */,
@@ -122,6 +126,7 @@
 				8FE1602A2444075D00630122 /* SolApprBase.cpp */,
 				8FE2036023FA667200822791 /* ILP.cpp */,
 				8FA66BBA2404BF2400CA0CCB /* LRH.cpp */,
+				8F575BE32453D26D007BBE4D /* Allocator.cpp */,
 				8FB3CCB82430E66B005156D4 /* PureGH.cpp */,
 				8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */,
 				8FE160262443F99D00630122 /* PrimalExtractor.cpp */,
@@ -245,6 +250,7 @@
 				8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */,
 				8FB3CCBA2430E66B005156D4 /* PureGH.cpp in Sources */,
 				8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */,
+				8F575BE42453D26D007BBE4D /* Allocator.cpp in Sources */,
 				8FE1602B2444075D00630122 /* SolApprBase.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,7 +291,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

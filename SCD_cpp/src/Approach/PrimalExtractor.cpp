@@ -48,7 +48,7 @@ void RouteFixPE::build() {
     pexCplex->setWarning(env.getNullStream());
 }
 
-void RouteFixPE::update(double ****lrh_x_aeij, double ***lrh_u_aei) {
+void RouteFixPE::update() {
     IloExpr linExpr(env);
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
@@ -64,30 +64,25 @@ void RouteFixPE::update(double ****lrh_x_aeij, double ***lrh_u_aei) {
     }
 }
 
-void RouteFixPE::solve(double ****lrh_x_aeij, double ***lrh_u_aei) {
-    update(lrh_x_aeij, lrh_u_aei);
-    pexCplex->solve();
-    if (pexCplex->getStatus() == IloAlgorithm::Infeasible) {
-        throw "the pexCplex is infeasible";
-    }
-    if (pexCplex->getStatus() == IloAlgorithm::Optimal) {
-        F_V = pexCplex->getObjValue();
-        for (int a: prob->A) {
+void RouteFixPE::getSol(Solution *sol) {
+    for (int a: prob->A) {
+        for (int k: prob->K) {
+            sol->y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
+        }
+        for (int e: prob->E_a[a]) {
             for (int k: prob->K) {
-                y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
+                sol->z_aek[a][e][k] = pexCplex->getValue(pex_z_aek[a][e][k]);
             }
-            for (int e: prob->E_a[a]) {
-                for (int k: prob->K) {
-                    z_aek[a][e][k] = pexCplex->getValue(pex_z_aek[a][e][k]);
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    sol->x_aeij[a][e][i][j] = lrh_x_aeij[a][e][i][j];
                 }
+                sol->u_aei[a][e][i] = lrh_u_aei[a][e][i];
             }
         }
-        x_aeij = lrh_x_aeij;
-        u_aei = lrh_u_aei;
-    } else {
-        throw "the pexCplex is not solved optimally";
     }
 }
+
 
 void ColGenPE::build() {
     pexModel = new IloModel(env);
@@ -109,7 +104,7 @@ void ColGenPE::build() {
         cnsts.add(linExpr <= 1);
         cnsts[cnsts.getSize() - 1].setName(buf);
     }
-    
+    //
     for (int a: prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K) {
@@ -141,7 +136,7 @@ void ColGenPE::build() {
     pexCplex->setWarning(env.getNullStream());
 }
 
-void ColGenPE::update(double ****lrh_x_aeij, double ***lrh_u_aei) {
+void ColGenPE::update() {
     char buf[2048];
     IloRangeArray cnsts(env);
     IloExpr linExpr(env);
@@ -223,78 +218,58 @@ void ColGenPE::update(double ****lrh_x_aeij, double ***lrh_u_aei) {
     pexCplex->getObjective().setExpr(objF);
 }
 
-void ColGenPE::solve(double ****lrh_x_aeij, double ***lrh_u_aei) {
-    update(lrh_x_aeij, lrh_u_aei);
-//    pexCplex->exportModel("after.lp");
-    pexCplex->solve();
-    if (pexCplex->getStatus() == IloAlgorithm::Infeasible) {
-        throw "the pexCplex is infeasible";
-    }
-    if (pexCplex->getStatus() == IloAlgorithm::Optimal) {
-        F_V = pexCplex->getObjValue();
-        for (int a: prob->A) {
-            std::set<int> assignedTasks_a;
-            for (int k: prob->K) {
-                y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
-                if (y_ak[a][k] > 0.5) {
-                    assignedTasks_a.insert(k);
+void ColGenPE::getSol(Solution *sol) {
+    for (int a: prob->A) {
+        std::set<int> assignedTasks_a;
+        for (int k: prob->K) {
+            sol->y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
+            if (sol->y_ak[a][k] > 0.5) {
+                assignedTasks_a.insert(k);
+            }
+        }
+        for (int e: prob->E_a[a]) {
+            int w = -1;
+            bool chosenColExist = false;
+            for (int i = 0; i < og_ae[a][e].size(); i++) {
+                w = og_ae[a][e][i];
+                if (pexCplex->getValue((*pex_th_w)[w]) > 0.5) {
+                    chosenColExist = true;
+                    break;
                 }
             }
-            for (int e: prob->E_a[a]) {
-                for (int k: prob->K) {
-                    z_aek[a][e][k] = 0.0;
-                }
-                for (int i: prob->N_ae[a][e]) {
-                    for (int j: prob->N_ae[a][e]) {
-                        x_aeij[a][e][i][j] = 0.0;
-                    }
-                    u_aei[a][e][i] = 0.0;
-                }
-                //
-                int w = -1;
-                bool chosenColExist = false;
-                for (int i = 0; i < og_ae[a][e].size(); i++) {
-                    w = og_ae[a][e][i];
-                    if (pexCplex->getValue((*pex_th_w)[w]) > 0.5) {
-                        chosenColExist = true;
-                        break;
+            if (chosenColExist) {
+                for (int k: assignedTasks_a) {
+                    if (og_tsk[w].find(k) == og_tsk[w].end()) {
+                        sol->z_aek[a][e][k] = 1.0;
                     }
                 }
-                if (chosenColExist) {
-                    for (int k: assignedTasks_a) {
-                        if (og_tsk[w].find(k) == og_tsk[w].end()) {
-                            z_aek[a][e][k] = 1.0;
-                        }
-                    }
-                    int n0 = og_rut[w][0], n1;
-                    u_aei[a][e][n0] = og_arT[w][0];
-                    for (int i = 1; i < og_rut[w].size(); i++) {
-                        n1 = og_rut[w][i];
-                        x_aeij[a][e][n0][n1] = 1.0;
-                        //
-                        n0 = n1;
-                        u_aei[a][e][n0] = og_arT[w][i];
-                    }
-                } else {
-                    for (int k: assignedTasks_a) {
-                        z_aek[a][e][k] = 1.0;
-                    }
-                    int n0 = prob->R_ae[a][e][0], n1;
-                    u_aei[a][e][n0] = prob->al_i[n0];
-                    for (int i = 1; i < prob->R_ae[a][e].size(); i++) {
-                        n1 = prob->R_ae[a][e][i];
-                        x_aeij[a][e][n0][n1] = 1.0;
-                        //
-                        double erest_arrvTime = u_aei[a][e][n0] + prob->t_ij[n0][n1];
-                        double actual_arrvTime = erest_arrvTime > prob->al_i[n1] ? erest_arrvTime : prob->al_i[n1];
-                        //
-                        n0 = n1;
-                        u_aei[a][e][n0] = actual_arrvTime;
-                    }
+                int n0 = og_rut[w][0], n1;
+                sol->u_aei[a][e][n0] = og_arT[w][0];
+                for (int i = 1; i < og_rut[w].size(); i++) {
+                    n1 = og_rut[w][i];
+                    sol->x_aeij[a][e][n0][n1] = 1.0;
+                    //
+                    n0 = n1;
+                    sol->u_aei[a][e][n0] = og_arT[w][i];
+                }
+            } else {
+                for (int k: assignedTasks_a) {
+                    sol->z_aek[a][e][k] = 1.0;
+                }
+                int n0 = prob->R_ae[a][e][0], n1;
+                sol->u_aei[a][e][n0] = prob->al_i[n0];
+                for (int i = 1; i < prob->R_ae[a][e].size(); i++) {
+                    n1 = prob->R_ae[a][e][i];
+                    sol->x_aeij[a][e][n0][n1] = 1.0;
+                    //
+                    double erest_arrvTime = sol->u_aei[a][e][n0] + prob->t_ij[n0][n1];
+                    double actual_arrvTime = erest_arrvTime > prob->al_i[n1] ? erest_arrvTime : prob->al_i[n1];
+                    //
+                    n0 = n1;
+                    sol->u_aei[a][e][n0] = actual_arrvTime;
                 }
             }
         }
-    } else {
-        throw "the pexCplex is not solved optimally";
     }
 }
+

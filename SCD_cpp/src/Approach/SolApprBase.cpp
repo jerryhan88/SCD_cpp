@@ -9,7 +9,7 @@
 #include "../../include/SolApprBase.hpp"
 
 
-IloNumVar** gen_y_ak(Problem *prob, IloEnv &env, char vType) {
+IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
     char buf[DEFAULT_BUFFER_SIZE];
@@ -24,7 +24,7 @@ IloNumVar** gen_y_ak(Problem *prob, IloEnv &env, char vType) {
     return y_ak;
 }
 
-IloNumVar*** gen_z_aek(Problem *prob, IloEnv &env, char vType) {
+IloNumVar*** new_inv_aek(Problem *prob, IloEnv &env, char vType) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
     char buf[DEFAULT_BUFFER_SIZE];
@@ -42,7 +42,7 @@ IloNumVar*** gen_z_aek(Problem *prob, IloEnv &env, char vType) {
     return z_aek;
 }
 
-IloNumVar**** gen_x_aeij(Problem *prob, IloEnv &env, char vType) {
+IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
     char buf[DEFAULT_BUFFER_SIZE];
@@ -66,7 +66,7 @@ IloNumVar**** gen_x_aeij(Problem *prob, IloEnv &env, char vType) {
     return x_aeij;
 }
 
-IloNumVar*** gen_u_aei(Problem *prob, IloEnv &env) {
+IloNumVar*** new_inv_aei(Problem *prob, IloEnv &env) {
     char buf[DEFAULT_BUFFER_SIZE];
     IloNumVar ***u_aei = new IloNumVar**[prob->A.size()];
     for (int a: prob->A) {
@@ -80,6 +80,46 @@ IloNumVar*** gen_u_aei(Problem *prob, IloEnv &env) {
         }
     }
     return u_aei;
+}
+
+void delete_inv_ak(Problem *prob, IloNumVar **inv_ak) {
+    for (int a: prob->A) {
+        delete [] inv_ak[a];
+    }
+    delete [] inv_ak;
+}
+
+void delete_inv_aek(Problem *prob, IloNumVar ***inv_aek) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] inv_aek[a][e];
+        }
+        delete [] inv_aek[a];
+    }
+    delete [] inv_aek;
+}
+
+void delete_inv_aeij(Problem *prob, IloNumVar ****inv_aeij) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i = 0; i < prob->cN.size(); i++) {
+                delete [] inv_aeij[a][e][i];
+            }
+            delete [] inv_aeij[a][e];
+        }
+        delete [] inv_aeij[a];
+    }
+    delete [] inv_aeij;
+}
+
+void delete_inv_aei(Problem *prob, IloNumVar ***inv_aei) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] inv_aei[a][e];
+        }
+        delete [] inv_aei[a];
+    }
+    delete [] inv_aei;
 }
 
 void BaseMM::build_baseModel() {

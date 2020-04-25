@@ -17,6 +17,7 @@
 #include "SolApprBase.hpp"
 #include "Problem.hpp"
 #include "Solution.hpp"
+#include "Allocator.hpp"
 #include "RouterSCD.hpp"
 #include "PrimalExtractor.hpp"
 //
@@ -107,8 +108,6 @@ public:
     bool confirmTaskSelection(Agent *agt);
 };
 
-
-
     
 class ILP : public BaseMM {
 public:
@@ -133,9 +132,7 @@ public:
     int numIters, noUpdateCounter_L;
     double **lrh_y_ak, ***lrh_z_aek, ****lrh_x_aeij, ***lrh_u_aei, ***lrh_l_aek;
     //
-    IloModel *etaModel; // Evaluation on Task Assingment
-    IloCplex *etaCplex;
-    IloNumVar **eta_y_ak, ***eta_z_aek;
+    Allocator *alr;
     std::vector<std::vector<RouterSCD*>> routers;
     PrimalExtractor *pex;
     //
@@ -166,18 +163,18 @@ public:
         lrh_l_aek = new_dbl_aek(prob);
         //
         if (_EXTRACTOR == "RF") {
-            pex = new RouteFixPE(prob);
+            pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
         } else {
             assert (_EXTRACTOR == "CG");
-            pex = new ColGenPE(prob);
+            pex = new ColGenPE(prob, lrh_x_aeij, lrh_u_aei);
         }
-        build_etaModel();
+        alr = new Allocator(prob, lrh_l_aek);
         build_rutModels();
         //
         bestSol = nullptr;
         //
         if (logPath != "") {
-            std::string _header("Iteration,wallT,cpuT,Function,L_V*,L_V,F_V*,F_V,Note");
+            std::string _header("Iteration,wallT,cpuT,Function,Note");
             char header[_header.size() + 1];
             std::strcpy(header, _header.c_str());
             createCSV(logPath, header);
@@ -191,14 +188,11 @@ public:
         delete_dbl_aek(prob, lrh_l_aek);
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                delete [] eta_z_aek[a][e];
                 delete routers[a][e];
             }
-            delete [] eta_y_ak[a]; delete [] eta_z_aek[a];
         }
-        delete [] eta_y_ak; delete [] eta_z_aek;
         //
-        delete etaCplex; delete etaModel;
+        delete alr;
         delete pex;
         env.end();
         routers.clear();
@@ -209,23 +203,14 @@ private:
     void solve_dualProblem();
     bool updateLMs();
     //
-    void build_etaModel();
-    void update_etaModel();
     void solve_etaModel();
     //
     void build_rutModels();
-    void update_rutMM(int a, int e);
     void solve_rutModels();
     //
-    void build_pexModel();
-    void update_pexModel();
     void solve_pexModel();
     //
-    void logging(std::string indicator,
-                 std::string _L_V_star, std::string _L_V, std::string _F_V_star, std::string _F_V,
-                 std::string note);
-
-    
+    void logging(std::string indicator, std::string note);
 };
 
 #endif /* Solver_h */

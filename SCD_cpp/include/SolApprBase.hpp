@@ -28,7 +28,7 @@ public:
     TimeTracker *tt;
     unsigned long time_limit_sec;
     std::string logPath;
-    ThreadPool& pool = ThreadPool::getInstance(1);
+    ThreadPool &pool = ThreadPool::getInstance(1);
     //
     SolApprBase(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec, int numThreads, std::string logPath) {
         this->prob = prob;
@@ -46,10 +46,17 @@ public:
     }
 };
 
-IloNumVar** gen_y_ak(Problem *prob, IloEnv &env, char vType);
-IloNumVar*** gen_z_aek(Problem *prob, IloEnv &env, char vType);
-IloNumVar**** gen_x_aeij(Problem *prob, IloEnv &env, char vType);
-IloNumVar*** gen_u_aei(Problem *prob, IloEnv &env);
+IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType);
+IloNumVar*** new_inv_aek(Problem *prob, IloEnv &env, char vType);
+IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType);
+IloNumVar*** new_inv_aei(Problem *prob, IloEnv &env);
+
+
+void delete_inv_ak(Problem *prob, IloNumVar **inv_ak);
+void delete_inv_aek(Problem *prob, IloNumVar ***inv_aek);
+void delete_inv_aeij(Problem *prob, IloNumVar ****inv_aeij);
+void delete_inv_aei(Problem *prob, IloNumVar ***inv_aei);
+
 
 class BaseMM : public SolApprBase {
 public:
@@ -67,10 +74,10 @@ public:
         this->lpPath = lpPath;
         this->pathPrefix = lpPath.substr(0, lpPath.find(".lp"));
         //
-        y_ak = gen_y_ak(prob, env, vType);
-        z_aek = gen_z_aek(prob, env, vType);
-        x_aeij = gen_x_aeij(prob, env, vType);
-        u_aei = gen_u_aei(prob, env);
+        y_ak = new_inv_ak(prob, env, vType);
+        z_aek = new_inv_aek(prob, env, vType);
+        x_aeij = new_inv_aeij(prob, env, vType);
+        u_aei = new_inv_aei(prob, env);
         COM_cnsts = new IloRangeArray(env);
         COM_cnsts_index = new long**[prob->A.size()];
         for (int a : prob->A) {
@@ -86,16 +93,10 @@ public:
         baseCplex->setOut(env.getNullStream());
     }
     ~BaseMM() {
-        for (int a: prob->A) {
-            for (int e: prob->E_a[a]) {
-                for (int i = 0; i < prob->cN.size(); i++) {
-                    delete [] x_aeij[a][e][i];
-                }
-                delete [] z_aek[a][e]; delete [] x_aeij[a][e]; delete [] u_aei[a][e];
-            }
-            delete [] y_ak[a]; delete [] z_aek[a]; delete [] x_aeij[a]; delete [] u_aei[a];
-        }
-        delete [] y_ak; delete [] z_aek; delete [] x_aeij; delete [] u_aei;
+        delete_inv_ak(prob, y_ak);
+        delete_inv_aek(prob, z_aek);
+        delete_inv_aeij(prob, x_aeij);
+        delete_inv_aei(prob, u_aei);
         //
         delete baseCplex;
         delete baseModel;

@@ -23,14 +23,10 @@ void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh
         rutMM->cc->bestRelVal = DBL_MAX;
     }
     rutMM->cplex->getObjective().setExpr(objF);
-//    if (rutMM->cplex->getObjective().getSense() != IloObjective::Minimize) {
-//        rutMM->cplex->getObjective().setSense(IloObjective::Minimize);
-//    }
     objF.end();
 }
 
-void run_rutAlgo(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, double *rut_u_i,
-                 TimeTracker *tt, unsigned long time_limit_sec) {
+void run_rutAlgo(rmm::RouteMM *rutMM, TimeTracker *tt, unsigned long time_limit_sec) {
     unsigned long timeLimit4RutSolving = time_limit_sec;
     timeLimit4RutSolving -= (unsigned long) tt->get_elapsedTimeWall();
     rutMM->cplex->setParam(IloCplex::TiLim, timeLimit4RutSolving);
@@ -38,6 +34,9 @@ void run_rutAlgo(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, doubl
     if (rutMM->cplex->getStatus() == IloAlgorithm::Infeasible) {
         throw "the rutMM is infeasible";
     }
+}
+
+void getSol_rutMM(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, double *rut_u_i){
     if (rutMM->cplex->getStatus() == IloAlgorithm::Optimal) {
         *rut_objV = -rutMM->cplex->getObjValue();
         for (int i: rutMM->prob->N) {
@@ -51,21 +50,22 @@ void run_rutAlgo(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, doubl
     }
 }
 
+
 void RouterILP::update() {
     update_objF(rutAlgo, prob, a, e, lrh_l_aek);
 }
 
-void RouterILP::run() {
-    run_rutAlgo(rutAlgo, &rut_objV, rut_x_ij, rut_u_i,
-                tt, time_limit_sec);
+void RouterILP::solve() {
+    run_rutAlgo(rutAlgo, tt, time_limit_sec);
 }
 
+void RouterILP::getSol() {
+    getSol_rutMM(rutAlgo, &rut_objV, rut_x_ij, rut_u_i);
+}
 
 void RouterBnC::update() {
     update_objF(rutAlgo, prob, a, e, lrh_l_aek);
-    if (turOnCutPool) {
-        rutAlgo->add_detectedCuts2MM();
-    }
+    rutAlgo->clear_detectedCuts();
     //
     gh->initIH();
     int k = 0;
@@ -75,11 +75,26 @@ void RouterBnC::update() {
     }
 }
 
-void RouterBnC::run() {
+void RouterBnC::solve() {
     gh->run();
     rutAlgo->set_initSol(gh->x_ij, gh->u_i);
-    run_rutAlgo(rutAlgo, &rut_objV, rut_x_ij, rut_u_i,
-                tt, time_limit_sec);
+    run_rutAlgo(rutAlgo, tt, time_limit_sec);
+}
+
+void RouterBnC::getSol() {
+    getSol_rutMM(rutAlgo, &rut_objV, rut_x_ij, rut_u_i);
+}
+
+void RouterBnCoc::update() {
+    update_objF(rutAlgo, prob, a, e, lrh_l_aek);
+    rutAlgo->add_detectedCuts2MM();
+    //
+    gh->initIH();
+    int k = 0;
+    for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
+        prob->RP_ae[a][e]->r_k[k] = lrh_l_aek[a][e][*it];
+        k++;
+    }
 }
 
 void RouterGH::update() {
@@ -92,9 +107,11 @@ void RouterGH::update() {
     }
 }
 
-void RouterGH::run() {
+void RouterGH::solve() {
     rutAlgo->run();
-    //
+}
+
+void RouterGH::getSol() {
     rut_objV = -rutAlgo->get_objV();
     for (int i: rutAlgo->prob->N) {
         for (int j: rutAlgo->prob->N) {

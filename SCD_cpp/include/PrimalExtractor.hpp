@@ -12,6 +12,7 @@
 #include <ilcplex/ilocplex.h>
 
 #include "Problem.hpp"
+#include "Solution.hpp"
 #include "SolApprBase.hpp"
 
 class PrimalExtractor {
@@ -22,36 +23,23 @@ public:
     IloModel *pexModel;
     IloCplex *pexCplex;
     //
-    double **y_ak, ***z_aek, ****x_aeij, ***u_aei;
-    double F_V;
+    double ****lrh_x_aeij, ***lrh_u_aei;
     //
-    PrimalExtractor(Problem *prob) {
+    PrimalExtractor(Problem *prob, double ****lrh_x_aeij, double ***lrh_u_aei) {
         this->prob = prob;
+        this->lrh_x_aeij = lrh_x_aeij;
+        this->lrh_u_aei = lrh_u_aei;
         //
-        size_t numAgents, numTasks, numNodes;
-        numAgents = prob->A.size();
-        numTasks = prob->K.size();
-        numNodes = prob->cN.size();
-        //
-        y_ak = new_dbl_ak(prob);
-        z_aek = new_dbl_aek(prob);
-        x_aeij = new_dbl_aeij(prob);
-        u_aei = new_dbl_aei(prob);
     }
-    ~PrimalExtractor() {
-        delete_dbl_ak(prob, y_ak);
-        delete_dbl_aek(prob, z_aek);
-        delete_dbl_aeij(prob, x_aeij);
-        delete_dbl_aei(prob, u_aei);
-    }
+    ~PrimalExtractor() { }
     virtual void build() {
         throw "Should override build()";
     }
-    virtual void update(double ****lrh_x_aeij, double ***lrh_u_aei) {
+    virtual void update() {
         throw "Should override update()";
     }
-    virtual void solve(double ****lrh_x_aeij, double ***lrh_u_aei) {
-        throw "Should override solve()";
+    virtual void getSol(Solution *sol) {
+        throw "Should override getSol()";
     }
 };
 
@@ -61,9 +49,9 @@ public:
     IloRangeArray *pex_COM_cnsts;
     long ***pex_COM_cnsts_index;
     //
-    RouteFixPE(Problem *prob): PrimalExtractor(prob) {
-        pex_y_ak = gen_y_ak(prob, env, 'I');
-        pex_z_aek = gen_z_aek(prob, env, 'I');
+    RouteFixPE(Problem *prob, double ****lrh_x_aeij, double ***lrh_u_aei): PrimalExtractor(prob, lrh_x_aeij, lrh_u_aei) {
+        pex_y_ak = new_inv_ak(prob, env, 'I');
+        pex_z_aek = new_inv_aek(prob, env, 'I');
         //
         pex_COM_cnsts = new IloRangeArray(env);
         pex_COM_cnsts_index = new long**[prob->A.size()];
@@ -76,15 +64,14 @@ public:
         build();
     }
     ~RouteFixPE() {
+        delete_inv_ak(prob, pex_y_ak);
+        delete_inv_aek(prob, pex_z_aek);
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                delete [] pex_z_aek[a][e];
                 delete [] pex_COM_cnsts_index[a][e];
             }
-            delete [] pex_y_ak[a]; delete [] pex_z_aek[a];
             delete [] pex_COM_cnsts_index[a];
         }
-        delete [] pex_y_ak; delete [] pex_z_aek;
         delete [] pex_COM_cnsts_index;
         //
         delete pexCplex; delete pexModel;
@@ -93,8 +80,8 @@ public:
     }
     //
     void build();
-    void update(double ****lrh_x_aeij, double ***lrh_u_aei);
-    void solve(double ****lrh_x_aeij, double ***lrh_u_aei);
+    void update();
+    void getSol(Solution *sol);
 };
 
 class ColGenPE: public PrimalExtractor {
@@ -114,8 +101,8 @@ public:
     std::vector<std::vector<double>> og_arT;
     std::vector<std::set<int>> og_tsk;
     //
-    ColGenPE(Problem *prob): PrimalExtractor(prob) {
-        pex_y_ak = gen_y_ak(prob, env, 'I');
+    ColGenPE(Problem *prob, double ****lrh_x_aeij, double ***lrh_u_aei): PrimalExtractor(prob, lrh_x_aeij, lrh_u_aei) {
+        pex_y_ak = new_inv_ak(prob, env, 'I');
         pex_th_w = new IloNumVarArray(env);
         pex_ONE_cnsts = new IloRangeArray(env);
         pex_ONE_cnsts_index = new long*[prob->A.size()];
@@ -132,8 +119,24 @@ public:
         }
         build();
     }
+    ~ColGenPE() {
+        delete_inv_ak(prob, pex_y_ak);
+        delete pex_th_w;
+        delete pex_ONE_cnsts;
+        for (int a: prob->A) {
+            delete [] pex_ONE_cnsts_index[a];
+        }
+        delete [] pex_ONE_cnsts_index;
+        //
+        og.clear(); og_a.clear(); og_ae.clear(); p_w.clear(); e_wk.clear();
+        og_rut.clear(); og_arT.clear(); og_tsk.clear();
+        //
+        delete pexCplex; delete pexModel;
+        env.end();
+    }
+    
     void build();
-    void update(double ****lrh_x_aeij, double ***lrh_u_aei);
-    void solve(double ****lrh_x_aeij, double ***lrh_u_aei);
+    void update();
+    void getSol(Solution *sol);
 };
 #endif /* PrimalExtractor_hpp */

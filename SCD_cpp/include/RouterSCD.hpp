@@ -67,8 +67,11 @@ public:
     virtual void update() {
         throw "Should override update()";
     }
-    virtual void run() {
-        throw "Should override run()";
+    virtual void solve() {
+        throw "Should override solve()";
+    }
+    virtual void getSol() {
+        throw "Should override getSol()";
     }
 };
 
@@ -92,7 +95,8 @@ public:
     }
     //
     void update();
-    void run();
+    void solve();
+    void getSol();
 };
 
 class RouterBnC: public RouterSCD {
@@ -103,22 +107,32 @@ public:
     //
     rmm::BnC *rutAlgo;
     rgh::InsertionHeuristic* gh;
-    bool turOnCutPool;
     //
     RouterBnC(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
               double ***lrh_l_aek,
-              std::string rutLogPath, std::string rutLpLogPath,
-              bool turOnCutPool): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
+              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
         rutAlgo = new rmm::BnC(rutProb, tt, time_limit_sec, rutLogPath, rutLpLogPath, cut_names, true, cutManagerType, isLocalCutAdd);
         rutAlgo->cplex->setWarning(rutAlgo->env.getNullStream());
-        this->turOnCutPool = turOnCutPool;
         this->rutCplex = rutAlgo->cplex;
         gh = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
     }
     //
     void update();
-    void run();
+    void solve();
+    void getSol();
+};
+
+class RouterBnCoc: public RouterBnC {
+public:
+    //
+    RouterBnCoc(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
+              int a, int e,
+              double ***lrh_l_aek,
+              std::string rutLogPath, std::string rutLpLogPath): RouterBnC(prob, tt, time_limit_sec, a, e, lrh_l_aek, rutLogPath, rutLpLogPath) {
+    }
+    //
+    void update();
 };
 
 class RouterGH: public RouterSCD {
@@ -133,7 +147,8 @@ public:
     }
     //
     void update();
-    void run();
+    void solve();
+    void getSol();
 };
 
 
