@@ -22,7 +22,6 @@ public:
     IloModel *etaModel; // Evaluation on Task Assingment
     IloCplex *etaCplex;
     IloNumVar **eta_y_ak, ***eta_z_aek;
-//    IloExpr *objF;
     //
     double ***lrh_l_aek;
     //
