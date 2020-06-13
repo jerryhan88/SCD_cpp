@@ -9,7 +9,6 @@
 #ifndef Allocator_h
 #define Allocator_h
 
-
 #include <ilcplex/ilocplex.h>
 
 #include "SolApprBase.hpp"
@@ -23,16 +22,12 @@ public:
     IloCplex *etaCplex;
     IloNumVar **eta_y_ak, ***eta_z_aek;
     //
+    IloNum minGap, lastUpdatedST;
+    IloBool aborted;
+    //
     double ***lrh_l_aek;
     //
-    Allocator(Problem *prob, double ***lrh_l_aek) {
-        this->prob = prob;
-        eta_y_ak = new_inv_ak(prob, env, 'I');
-        eta_z_aek = new_inv_aek(prob, env, 'I');
-        this->lrh_l_aek = lrh_l_aek;
-        //
-        build();
-    }
+    Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek);
     ~Allocator() {
         delete_inv_ak(prob, eta_y_ak);
         delete_inv_aek(prob, eta_z_aek);
@@ -44,7 +39,6 @@ public:
     void update();
     void getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek);
 };
-
 
 
 #endif /* Allocator_h */

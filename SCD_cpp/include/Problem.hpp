@@ -223,6 +223,9 @@ public:
                 prob->c_aeij[a][e] = new int*[numNodes];
                 for (int i = 0; i < numNodes; i++) {
                     prob->c_aeij[a][e][i] = new int[numNodes];
+                    for (int j = 0; j < numNodes; j++) {
+                        prob->c_aeij[a][e][i][j] = 0;
+                    }
                 }
             }
         }
@@ -235,9 +238,12 @@ public:
         }
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                for (int i: prob->N_ae[a][e]) {
-                    for (int j: prob->N_ae[a][e]) {
-                        prob->c_aeij[a][e][i][j] = prob_json["c_aeij"][a][e][i][j];
+                for (int i0 = 0; i0 < prob->R_ae[a][e].size(); i0++) {
+                    int locID0 = prob->R_ae[a][e][i0];
+                    for (int i1 = i0; i1 < prob->R_ae[a][e].size(); i1++) {
+                        int locID1 = prob->R_ae[a][e][i1];
+                        prob->c_aeij[a][e][locID0][locID1] = 1;
+                        prob->c_aeij[a][e][locID1][locID0] = 0;
                     }
                 }
             }

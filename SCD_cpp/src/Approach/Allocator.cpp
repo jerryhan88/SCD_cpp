@@ -8,7 +8,42 @@
 
 #include "../../include/Allocator.hpp"
 
- 
+//#define ALLOCATIOR_TIME_LIMIT 0.00001
+#define ALLOCATIOR_TIME_LIMIT 30
+
+ILOMIPINFOCALLBACK4(timeLimitCallback,
+                    IloNum,   timeLimit,
+                    IloNum*,   minGap,
+                    IloNum*,   lastUpdatedST,
+                    IloBool*,  aborted) {
+
+    if ( !(*aborted) && hasIncumbent()) {
+        IloNum gap = getMIPRelativeGap();
+        if (*minGap - gap > 0.01) {
+            *minGap = gap;
+            *lastUpdatedST = getCplexTime();
+        }
+        //
+        IloNum timeUsed = getCplexTime() - *lastUpdatedST;
+        if ( timeUsed > timeLimit ) {
+            *aborted = IloTrue;
+            abort();
+        }
+    }
+}
+
+Allocator::Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek) {
+    this->prob = prob;
+    //
+    eta_y_ak = new_inv_ak(prob, env, 'I');
+    eta_z_aek = new_inv_aek(prob, env, 'I');
+    this->lrh_l_aek = lrh_l_aek;
+    //
+    build();
+    //
+    etaCplex->use(timeLimitCallback(env, ALLOCATIOR_TIME_LIMIT, &minGap, &lastUpdatedST, &aborted));
+}
+
 void Allocator::build() {
     etaModel = new IloModel(env);
     //
@@ -25,7 +60,6 @@ void Allocator::build() {
 void Allocator::update() {
     // update coefficient associated with lambda values
     IloExpr objF(env);
-//    objF = new IloExpr(env);
     for (int k: prob->K) {
         for (int a : prob->A) {
             for (int e: prob->E_a[a]) {
@@ -44,10 +78,14 @@ void Allocator::update() {
     }
     etaCplex->getObjective().setExpr(objF);
     objF.end();
+    //
+    minGap = DBL_MAX;
+    lastUpdatedST = 0.0;
+    aborted = IloFalse;
 }
 
 void Allocator::getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek) {
-    if (etaCplex->getStatus() == IloAlgorithm::Optimal) {
+    try {
         *L1_V = -etaCplex->getObjValue();
         for (int a: prob->A) {
             for (int k: prob->K) {
@@ -59,8 +97,10 @@ void Allocator::getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek) {
                 }
             }
         }
-    } else {
-        throw "the etaModel is not solved optimally";
+    } catch (IloException& e) {
+        throw "the etaModel is not solved";
     }
-    
+    if (etaCplex->getStatus() != IloAlgorithm::Optimal) {
+        std::cout << "\tthe etaModel is not solved, but the solution is not optimal" << std::endl;
+    }
 }

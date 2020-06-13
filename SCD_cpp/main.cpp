@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
+
 
 #include <sys/types.h>
 #include <limits>
@@ -41,15 +43,21 @@ int main(int argc, const char * argv[]) {
             return 1;
         }
     }
+    int numThreads = 1;
+    unsigned long time_limit_sec = ULONG_MAX;
+    std::string lp_algo = "DSM";
     bool enforcementMode = false;
-    if (hasOption(arguments, "-ef")) {
-        enforcementMode = true;
-    }
-    int numThreads;
     if (hasOption(arguments, "-nth")) {
         numThreads = std::stoi(valueOf(arguments, "-nth"));
-    } else {
-        numThreads = 1;
+    }
+    if (hasOption(arguments, "-t")) {
+        time_limit_sec = std::stoi(valueOf(arguments, "-t"));
+    }
+    if (hasOption(arguments, "-la")) {
+        lp_algo = std::stoi(valueOf(arguments, "-la"));
+    }
+    if (hasOption(arguments, "-ef")) {
+        enforcementMode = true;
     }
     //
     std::string prob_dpath(valueOf(arguments, "-i"));
@@ -64,11 +72,13 @@ int main(int argc, const char * argv[]) {
         std::string prob_fpath(prob_dpath + "/" + fn);
         std::cout << prob_fpath << std::endl;
         //
+        std::cout << "\tprob_read_start; " << TimeTracker::get_curTime();
         Problem *prob;
         prob = Problem::read_json(prob_fpath);
         prob->gen_aeProbs();
         std::string postfix = prob->problemName;
         FilePathOrganizer fpo(appr_dpath, postfix);
+        std::cout << "\tprob_read_end; " << TimeTracker::get_curTime();
         if (!enforcementMode) {
             std::ifstream is;
             std::string handledFiles[] = {fpo.solPathCSV, fpo.lpPath};
@@ -89,26 +99,24 @@ int main(int argc, const char * argv[]) {
         if (!hasOption(arguments, "-l")) {
             fpo.logPath = "";
         }
-        unsigned long time_limit_sec;
-        if (hasOption(arguments, "-t")) {
-            time_limit_sec = std::stoi(valueOf(arguments, "-t"));
-        } else {
-            time_limit_sec = ULONG_MAX;
-        }
-        TimeTracker tt;
-        std::cout << tt.get_curTime();
-        std::cout << "\t" << appr_name << "; " << postfix << std::endl;
+        std::cout << "\t" << appr_name << "; " << postfix << "; " << TimeTracker::get_curTime();
         //
-        SolApprBase *solAppr;
+        TimeTracker tt;
+        SolApprBase *solAppr = nullptr;
         Solution *sol;
-        if (appr_name_base == "ILP") {
-            solAppr = new ILP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath);
+        if (appr_name_base == "LP") {
+            solAppr = new LP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
             sol = solAppr->solve();
-        } else if (appr_name_base == "LRH") {
+            sol->writeSolCSV(fpo.solPathCSV);
+            delete solAppr; delete sol;
+            continue;
+        } else if (appr_name_base == "ILP") {
+            solAppr = new ILP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
+            sol = solAppr->solve();
+        } else if (appr_name_base == "LRH" || appr_name_base == "CGLC") {
             std::vector<std::string> tokens = parseWithDelimiter(appr_name, "-");
-            assert (3 == tokens.size());
+            assert (2 == tokens.size());
             std::string _router = tokens[1];
-            std::string _extractor = tokens[2];
             char buf[4096];
             std::ifstream is;
             std::string setting_fpath(appr_dpath + "/LRH_setting.txt");
@@ -145,21 +153,31 @@ int main(int argc, const char * argv[]) {
             sprintf(buf, "echo TIME_LIMIT_SEC: %lu >> %s", time_limit_sec, setting_fpath.c_str());
             system(buf);
             //
-            solAppr = new LRH(prob, &tt,
-                              time_limit_sec, numThreads,
-                              fpo.logPath, fpo.lpPath,
-                              _router, _extractor,
-                              dual_gap_limit, num_iter_limit, no_improvement_limit);
+            if (appr_name_base == "LRH") {
+                solAppr = new LRH(prob, &tt,
+                time_limit_sec, numThreads,
+                fpo.logPath, fpo.lpPath, lp_algo,
+                _router,
+                dual_gap_limit, num_iter_limit, no_improvement_limit);
+            } else {
+                assert(appr_name_base == "CGLC");
+                solAppr = new CGLC(prob, &tt,
+                                time_limit_sec, numThreads,
+                                fpo.logPath, fpo.lpPath, lp_algo,
+                                _router,
+                                dual_gap_limit, num_iter_limit, no_improvement_limit);
+            }
             sol = solAppr->solve();
         } else if (appr_name_base == "PureGH") {
             solAppr = new PureGH(prob, &tt, time_limit_sec, numThreads, fpo.logPath);
             
             sol = solAppr->solve();
         } else {
-            
             sol = nullptr;
         }
         sol->writeSolCSV(fpo.solPathCSV);
         sol->writeSolTXT(fpo.solPathTXT);
+        delete solAppr;
+        delete sol;
     }
 }

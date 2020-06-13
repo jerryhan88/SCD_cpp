@@ -11,6 +11,8 @@
 
 #include <cfloat>
 #include <math.h>
+#include <set>
+#include <tuple>
 
 #include <ilcplex/ilocplex.h>
 
@@ -21,6 +23,10 @@
 #include "ck_util/util.hpp"         // from util
 
 #define DEFAULT_BUFFER_SIZE 2048
+#define LP_TIME_LIMIT 1800
+
+typedef std::tuple<int, int, int, int> iiiiTup;
+
 
 class SolApprBase {
 public:
@@ -28,7 +34,8 @@ public:
     TimeTracker *tt;
     unsigned long time_limit_sec;
     std::string logPath;
-    ThreadPool &pool = ThreadPool::getInstance(1);
+//    ThreadPool &builderPool = ThreadPool::getInstance(8);
+    ThreadPool &routerPool = ThreadPool::getInstance(1);
     //
     SolApprBase(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec, int numThreads, std::string logPath) {
         this->prob = prob;
@@ -36,7 +43,7 @@ public:
         this->tt = tt;
         this->time_limit_sec = time_limit_sec;
         if (numThreads > 1) {
-            pool.resize(numThreads);
+            routerPool.resize(numThreads);
         }
     }
     ~SolApprBase() {}
@@ -70,7 +77,13 @@ public:
     IloRangeArray *COM_cnsts;
     long ***COM_cnsts_index;
     //
-    BaseMM(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec, int numThreads, std::string logPath, std::string lpPath, char vType): SolApprBase(prob, tt, time_limit_sec, numThreads, logPath) {
+    BaseMM(Problem *prob, TimeTracker *tt,
+           unsigned long time_limit_sec, int numThreads,
+           std::string logPath, std::string lpPath,
+           std::string lp_algo, char vType): SolApprBase(prob, tt, time_limit_sec, numThreads, logPath) {
+        if (lp_algo != "DSM" && lp_algo != "IPM") {
+            assert(false);
+        }
         this->lpPath = lpPath;
         this->pathPrefix = lpPath.substr(0, lpPath.find(".lp"));
         //
@@ -91,6 +104,9 @@ public:
         build_baseModel();
         baseCplex = new IloCplex(*baseModel);
         baseCplex->setOut(env.getNullStream());
+        if (lp_algo == "IPM") {
+            baseCplex->setParam(IloCplex::Param::RootAlgorithm, IloCplex::Barrier);
+        }
     }
     ~BaseMM() {
         delete_inv_ak(prob, y_ak);
@@ -170,6 +186,7 @@ public:
     
 protected:
     void build_baseModel();
+    void def_preprocessing();
     void def_objF();
     void def_RUT_cnsts();
     void def_FC_cnsts_aeGiven(int a, int e);

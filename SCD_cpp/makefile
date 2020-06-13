@@ -20,7 +20,7 @@ LIB_FORMAT:=static_pic
 SRC_EXT:=cpp
 OBJ_EXT:=o
 
-CXX_OPT:=-std=c++11 -DIL_STD
+CXX_OPT:=-std=c++14 -DIL_STD
 #####################################################################
 #
 # Set paths

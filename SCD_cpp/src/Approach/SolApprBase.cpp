@@ -9,6 +9,8 @@
 #include "../../include/SolApprBase.hpp"
 
 
+//std::mutex sab_mtx;
+
 IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
@@ -123,10 +125,93 @@ void delete_inv_aei(Problem *prob, IloNumVar ***inv_aei) {
 }
 
 void BaseMM::build_baseModel() {
+    def_preprocessing();
+    //
     def_objF();
     def_ETA_cnsts(prob, env, y_ak, z_aek, baseModel);
     def_RUT_cnsts();
     def_COM_cnsts();
+}
+void BaseMM::def_preprocessing() {
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloRangeArray cnsts(env);
+    int a, e, i, j, o, d;
+    std::set<iiiiTup> invalid_dvX;
+    //
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i0 = 0; i0 < prob->R_ae[a][e].size() - 1; i0++) {
+                int n0 = prob->R_ae[a][e][i0];
+                double al_n0 = prob->al_i[n0];
+                int n2 = prob->R_ae[a][e][i0 + 1];
+                double be_n2 = prob->be_i[n2];
+                for (int n1: prob->P_ae[a][e]) {
+                    if (al_n0 + prob->t_ij[n0][n1] + prob->t_ij[n1][n2] > be_n2) {
+                        invalid_dvX.insert(std::make_tuple(a, e, n0, n1));
+                        invalid_dvX.insert(std::make_tuple(a, e, n1, n2));
+                    }
+                }
+                for (int n1: prob->D_ae[a][e]) {
+                    if (al_n0 + prob->t_ij[n0][n1] + prob->t_ij[n1][n2] > be_n2) {
+                        invalid_dvX.insert(std::make_tuple(a, e, n0, n1));
+                        invalid_dvX.insert(std::make_tuple(a, e, n1, n2));
+                    }
+                }
+            }
+        }
+    }
+    //
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    if (i == prob->d_ae[a][e] && j == prob->o_ae[a][e]) {
+                        continue;
+                    }
+                    if (prob->al_i[i] + prob->t_ij[i][j] > prob->be_i[j]) {
+                        invalid_dvX.insert(std::make_tuple(a, e, i, j));
+                    }
+                }
+            }
+        }
+    }
+    //
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            o = prob->o_ae[a][e];
+            for (int i: prob->N_ae[a][e]) {
+                if (i == prob->d_ae[a][e]) {
+                    continue;
+                }
+                invalid_dvX.insert(std::make_tuple(a, e, i, o));
+            }
+            d = prob->d_ae[a][e];
+            for (int j: prob->N_ae[a][e]) {
+                if (j == prob->o_ae[a][e]) {
+                    continue;
+                }
+                invalid_dvX.insert(std::make_tuple(a, e, d, j));
+            }
+        }
+    }
+    //
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k : prob->K_ae[a][e]) {
+                int i = prob->n_k[k];
+                int j = prob->h_k[k];
+                invalid_dvX.insert(std::make_tuple(a, e, i, j));
+            }
+        }
+    }
+    //
+    for (iiiiTup ele: invalid_dvX) {
+        std::tie(a, e, i, j) = ele;
+        cnsts.add(x_aeij[a][e][i][i] == 0);
+        sprintf(buf, "pP(%d)(%d)(%d)(%d)", a, e, i, j);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    baseModel->add(cnsts);
 }
 
 void BaseMM::def_objF() {
@@ -144,6 +229,11 @@ void BaseMM::def_objF() {
 }
 
 void BaseMM::def_RUT_cnsts() {
+//    auto build_rutConsts = [](BaseMM *mm, int a, int e) {
+//        mm->def_FC_cnsts_aeGiven(a, e);
+//        mm->def_AT_cnsts_aeGiven(a, e);
+//    };
+    
     // Routing constraints
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
@@ -151,6 +241,16 @@ void BaseMM::def_RUT_cnsts() {
             def_AT_cnsts_aeGiven(a, e);
         }
     }
+    
+//    std::vector<std::shared_future<void>> threadJobs;
+//    for (int a : prob->A) {
+//        for (int e: prob->E_a[a]) {
+//            std::shared_future<void> returnValue = (std::shared_future<void>) routerPool.push(build_rutConsts, this, a, e);
+//            threadJobs.push_back(returnValue);
+//        }
+//    }
+//    std::for_each(threadJobs.begin(), threadJobs.end(), [](std::shared_future<void> x){ x.get(); });
+    
 }
 
 void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
@@ -203,13 +303,11 @@ void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     cnsts.add(x_aeij[a][e][prob->d_ae[a][e]][prob->o_ae[a][e]] == 1);
     cnsts[cnsts.getSize() - 1].setName(buf);
     //
-    linExpr.clear();
-    sprintf(buf, "NS(%d)(%d)", a, e);  // No Self Flow; tightening bounds
     for (int i: prob->N_ae[a][e]) {
-        linExpr += x_aeij[a][e][i][i];
+        sprintf(buf, "NS(%d)(%d)(%d)", a, e, i);  // No Self Flow; tightening bounds
+        cnsts.add(x_aeij[a][e][i][i] == 0);
+        cnsts[cnsts.getSize() - 1].setName(buf);
     }
-    cnsts.add(linExpr == 0);
-    cnsts[cnsts.getSize() - 1].setName(buf);
     //
     // Flow about delivery nodes; only when the warehouse visited
     //
@@ -246,6 +344,7 @@ void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     }
     //
     linExpr.end();
+//    std::unique_lock<std::mutex> lock(sab_mtx);
     baseModel->add(cnsts);
 }
 
@@ -360,6 +459,7 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     cnsts[cnsts.getSize() - 1].setName(buf);
     //
     linExpr.end();
+//    std::unique_lock<std::mutex> lock(sab_mtx);
     baseModel->add(cnsts);
 }
 

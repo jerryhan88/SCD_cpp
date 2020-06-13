@@ -12,24 +12,14 @@
 std::mutex lrh_mtx_vec;
 
 Solution* LRH::solve() {
+    build_allocator();
+    build_extractor();
+    //
+    std::cout << "\t" << "The LP model has been build " << TimeTracker::get_curTime();
     logging("Begin_Initialization", " ");
-    //
-    logging("Begin_baseSolve", " ");
-    baseCplex->solve();
-    logging("End_baseSolve", " ");
-    //
-    logging("Begin_baseGetSol", " ");
-    for (int a : prob->A) {
-        for (int e: prob->E_a[a]) {
-            for (int k: prob->K_ae[a][e]) {
-                lrh_l_aek[a][e][k] = baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]);
-            }
-        }
-    }
-    logging("End_baseGetSol", " ");
-    //
+    init_LMs();
     logging("End_Initialization", " ");
-    std::cout << "\t" << "The LP model has been solved " << tt->get_curTime();
+    std::cout << "\t" << "The LP model has been solved " << TimeTracker::get_curTime();
     //
     int terminationCon = -1;
     while (tt->get_elapsedTimeWall() < time_limit_sec) {
@@ -47,15 +37,15 @@ Solution* LRH::solve() {
         if (logPath != "") {
             logging("IterSummary", "Dual Gap:" + std::to_string(bestSol->gap));
         }
-        std::cout << "\t" << numIters << "th iter finished; " << tt->get_curTime();
+        std::cout << "\t" << numIters << "th iter finished; " << TimeTracker::get_curTime();
         if (NUM_ITER_LIMIT == ++numIters) {
             terminationCon = 0;
             break;
         }
-        if (bestSol->gap < DUAL_GAP_LIMIT) {
-            terminationCon = 1;
-            break;
-        }
+//        if (bestSol->gap < DUAL_GAP_LIMIT) {
+//            terminationCon = 1;
+//            break;
+//        }
         if (zeroDenominator) {
             terminationCon = 2;
             break;
@@ -95,6 +85,24 @@ Solution* LRH::solve() {
     fout_csv.close();
     
     return bestSol;
+}
+
+void LRH::init_LMs() {
+    logging("Begin_baseSolve", " ");
+    unsigned long TiLim = LP_TIME_LIMIT < time_limit_sec ? LP_TIME_LIMIT : time_limit_sec;
+    baseCplex->setParam(IloCplex::TiLim, TiLim);
+    baseCplex->solve();
+    logging("End_baseSolve", " ");
+    //
+    logging("Begin_baseGetSol", " ");
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K_ae[a][e]) {
+                lrh_l_aek[a][e][k] = baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]);
+            }
+        }
+    }
+    logging("End_baseGetSol", " ");
 }
 
 bool LRH::updateLMs() {
@@ -173,31 +181,29 @@ void LRH::solve_dualProblem() {
     }
 }
 
+void LRH::build_allocator() {
+    alr = new Allocator(prob, tt, lrh_l_aek);
+}
+
 void LRH::solve_etaModel() {
     logging("Begin_solve_etaModel", " ");
     //
     logging("Begin_solve_etaModel_updateModel", " ");
     alr->update();
-//    alr->etaCplex->exportModel("before.lp");
-    
-//    alr->objF->setLinearCoef(alr->eta_y_ak[0][0], 100.0);
-    
-//    (*pex_ONE_cnsts)[cnsts_id].setLinearCoef((*pex_th_w)[col_index], 1.0);
-    
-//    alr->etaCplex->getObjective().setExpr(*(alr->objF));
-//
-//    alr->etaCplex->exportModel("after.lp");
-//
-//    char buf[1024];
-//    sprintf(buf, "TT");
-//    alr->objF->setLinearCoef(IloNumVar(env, 0.0, 1.0, ILOINT, buf), 100.0);
-//    alr->etaCplex->getObjective().setExpr(*(alr->objF));
-//    alr->etaCplex->exportModel("after1.lp");
     
     logging("End_solve_etaModel_updateModel", " ");
     //
     logging("Begin_solve_etaModel_solve", " ");
-    alr->etaCplex->solve();
+    
+    unsigned long timeLimit4AssSolving = time_limit_sec;
+    timeLimit4AssSolving -= (unsigned long) tt->get_elapsedTimeWall();
+    alr->etaCplex->setParam(IloCplex::TiLim, timeLimit4AssSolving);
+    try {
+        alr->etaCplex->solve();
+    } catch (IloException& e) {
+       std::cerr << "Concert exception caught: " << e << std::endl;
+    }
+
     if (alr->etaCplex->getStatus() == IloAlgorithm::Infeasible) {
         alr->etaCplex->exportModel(lpPath.c_str());
         throw "the etaModel is infeasible";
@@ -280,12 +286,12 @@ void LRH::solve_rutModels() {
         rut->getSol();
     };
     //
-    if (pool.getThreadCount() > 1) {
+    if (routerPool.getThreadCount() > 1) {
         std::vector<std::shared_future<void>> threadJobs;
         logging("Begin_solve_rutModels_update", " ");
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(rut_update, routers[a][e]);
+                std::shared_future<void> returnValue = (std::shared_future<void>) routerPool.push(rut_update, routers[a][e]);
                 threadJobs.push_back(returnValue);
             }
         }
@@ -295,7 +301,7 @@ void LRH::solve_rutModels() {
         logging("Begin_solve_rutModels_solve", " ");
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(rut_solve, routers[a][e], numIters, &subProbSolwallTs, pathPrefix);
+                std::shared_future<void> returnValue = (std::shared_future<void>) routerPool.push(rut_solve, routers[a][e], numIters, &subProbSolwallTs, pathPrefix);
                 threadJobs.push_back(returnValue);
             }
         }
@@ -305,7 +311,7 @@ void LRH::solve_rutModels() {
         logging("Begin_solve_rutModels_getSol", " ");
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
-                std::shared_future<void> returnValue = (std::shared_future<void>) pool.push(rut_getSol, routers[a][e]);
+                std::shared_future<void> returnValue = (std::shared_future<void>) routerPool.push(rut_getSol, routers[a][e]);
                 threadJobs.push_back(returnValue);
             }
         }
@@ -348,6 +354,10 @@ void LRH::solve_rutModels() {
         }
     }
     logging("End_solve_rutModels", "L2V: " + std::to_string(L2_V));
+}
+
+void LRH::build_extractor() {
+    pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
 }
 
 void LRH::solve_pexModel() {

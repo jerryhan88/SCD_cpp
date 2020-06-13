@@ -9,7 +9,7 @@
 #ifndef Solver_h
 #define Solver_h
 
-
+#include <iostream>
 #include <tuple>
 #include <set>
 #include <vector>
@@ -108,12 +108,23 @@ public:
     bool confirmTaskSelection(Agent *agt);
 };
 
+class LP : public BaseMM {
+public:
+    LP(Problem *prob, TimeTracker *tt,
+        unsigned long time_limit_sec, int numThreads,
+        std::string logPath, std::string lpPath, std::string lp_algo) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, lp_algo, 'C') {
+        this->lpPath = lpPath;
+    }
+    ~LP() {
+    }
+    Solution* solve();
+};
     
 class ILP : public BaseMM {
 public:
     ILP(Problem *prob, TimeTracker *tt,
         unsigned long time_limit_sec, int numThreads,
-        std::string logPath, std::string lpPath) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, 'I') {
+        std::string logPath, std::string lpPath, std::string lp_algo) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, lp_algo, 'I') {
         this->lpPath = lpPath;
     }
     ~ILP() {
@@ -142,11 +153,10 @@ public:
     //
     LRH(Problem *prob, TimeTracker *tt,
         unsigned long time_limit_sec, int numThreads,
-        std::string logPath, std::string lpPath,
-        std::string _router, std::string _extractor,
-        double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, 'C') {
+        std::string logPath, std::string lpPath, std::string lp_algo,
+        std::string _router,
+        double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit) : BaseMM(prob, tt, time_limit_sec, numThreads, logPath, lpPath, lp_algo, 'C') {
         _ROUTER = _router;
-        _EXTRACTOR = _extractor;
         DUAL_GAP_LIMIT = dual_gap_limit;
         NUM_ITER_LIMIT = num_iter_limit;
         NO_IMPROVEMENT_LIMIT = no_improvement_limit;
@@ -162,13 +172,13 @@ public:
         lrh_u_aei = new_dbl_aei(prob);
         lrh_l_aek = new_dbl_aek(prob);
         //
-        if (_EXTRACTOR == "RF") {
-            pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
-        } else {
-            assert (_EXTRACTOR == "CG");
-            pex = new ColGenPE(prob, lrh_x_aeij, lrh_u_aei);
-        }
-        alr = new Allocator(prob, lrh_l_aek);
+        
+//        if (_EXTRACTOR == "RF") {
+//            pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
+//        } else {
+//            assert (_EXTRACTOR == "CG");
+//            pex = new ColGenPE(prob, lrh_x_aeij, lrh_u_aei);
+//        }
         build_rutModels();
         //
         bestSol = nullptr;
@@ -199,18 +209,32 @@ public:
     }
     //
     Solution* solve();
+    void init_LMs();
 private:
     void solve_dualProblem();
     bool updateLMs();
     //
+    void build_allocator();
     void solve_etaModel();
     //
     void build_rutModels();
     void solve_rutModels();
     //
+    void build_extractor();
     void solve_pexModel();
     //
     void logging(std::string indicator, std::string note);
+};
+
+class CGLC : public LRH {
+public:
+    CGLC(Problem *prob, TimeTracker *tt,
+        unsigned long time_limit_sec, int numThreads,
+        std::string logPath, std::string lpPath, std::string lp_algo,
+        std::string _router,
+        double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit) : LRH(prob, tt, time_limit_sec, numThreads, logPath, lpPath, lp_algo, _router, dual_gap_limit, num_iter_limit, no_improvement_limit) {
+        
+    }
 };
 
 #endif /* Solver_h */
