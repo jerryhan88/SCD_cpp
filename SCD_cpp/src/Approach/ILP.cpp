@@ -6,7 +6,7 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Solver.hpp"
+#include "../../include/OtherSolvers.hpp"
 
 Solution* ILP::solve() {
     baseCplex->setParam(IloCplex::TiLim, time_limit_sec);

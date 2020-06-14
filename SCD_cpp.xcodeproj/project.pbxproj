@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8F575BE42453D26D007BBE4D /* Allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F575BE32453D26D007BBE4D /* Allocator.cpp */; };
 		8F69CFF3242B4AFB0094C519 /* RouterSCD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */; };
 		8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FA66BBA2404BF2400CA0CCB /* LRH.cpp */; };
 		8FB2A97A2494D2DA003E1D3C /* CGLC.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FB2A9792494D2DA003E1D3C /* CGLC.cpp */; };
@@ -17,7 +16,6 @@
 		8FC362332434A95F00B68635 /* ThreadPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FC362312434A95F00B68635 /* ThreadPool.cpp */; };
 		8FCE115024079FE100C8CB07 /* libutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FCE114F24079FE100C8CB07 /* libutil.a */; };
 		8FD2937D24750C0F006A9A44 /* LP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FD2937C24750C0F006A9A44 /* LP.cpp */; };
-		8FE160282443F99D00630122 /* PrimalExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE160262443F99D00630122 /* PrimalExtractor.cpp */; };
 		8FE1602B2444075D00630122 /* SolApprBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FE1602A2444075D00630122 /* SolApprBase.cpp */; };
 		8FE2035923FA65E300822791 /* libconcert.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035823FA65E300822791 /* libconcert.a */; };
 		8FE2035D23FA65FA00822791 /* libilocplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FE2035A23FA65FA00822791 /* libilocplex.a */; };
@@ -42,8 +40,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		8F575BE22453D255007BBE4D /* Allocator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Allocator.hpp; sourceTree = "<group>"; };
-		8F575BE32453D26D007BBE4D /* Allocator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Allocator.cpp; sourceTree = "<group>"; };
+		8F3776E42495CBFE00BF2BEB /* OtherSolvers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = OtherSolvers.hpp; sourceTree = "<group>"; };
+		8F3776E62495CD0600BF2BEB /* LRH.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LRH.hpp; sourceTree = "<group>"; };
+		8F3776E72495CF1800BF2BEB /* CGLC.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CGLC.hpp; sourceTree = "<group>"; };
 		8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RouterSCD.cpp; sourceTree = "<group>"; };
 		8F69CFF4242B4B420094C519 /* RouterSCD.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = RouterSCD.hpp; sourceTree = "<group>"; };
 		8FA66BBA2404BF2400CA0CCB /* LRH.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LRH.cpp; sourceTree = "<group>"; };
@@ -56,9 +55,6 @@
 		8FC362322434A95F00B68635 /* ThreadPool.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ThreadPool.hpp; sourceTree = "<group>"; };
 		8FCE114F24079FE100C8CB07 /* libutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libutil.a; path = ../util/lib/libutil.a; sourceTree = "<group>"; };
 		8FD2937C24750C0F006A9A44 /* LP.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LP.cpp; sourceTree = "<group>"; };
-		8FE160262443F99D00630122 /* PrimalExtractor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PrimalExtractor.cpp; sourceTree = "<group>"; };
-		8FE160272443F99D00630122 /* PrimalExtractor.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PrimalExtractor.hpp; sourceTree = "<group>"; };
-		8FE160292444043A00630122 /* Solver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Solver.hpp; sourceTree = "<group>"; };
 		8FE1602A2444075D00630122 /* SolApprBase.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SolApprBase.cpp; sourceTree = "<group>"; };
 		8FE2035823FA65E300822791 /* libconcert.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libconcert.a; path = "../../../../Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic/libconcert.a"; sourceTree = "<group>"; };
 		8FE2035A23FA65FA00822791 /* libilocplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilocplex.a; path = "../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libilocplex.a"; sourceTree = "<group>"; };
@@ -113,10 +109,10 @@
 			isa = PBXGroup;
 			children = (
 				8FB3CCB724308B50005156D4 /* SolApprBase.hpp */,
-				8FE160292444043A00630122 /* Solver.hpp */,
-				8F575BE22453D255007BBE4D /* Allocator.hpp */,
+				8F3776E62495CD0600BF2BEB /* LRH.hpp */,
+				8F3776E72495CF1800BF2BEB /* CGLC.hpp */,
+				8F3776E42495CBFE00BF2BEB /* OtherSolvers.hpp */,
 				8F69CFF4242B4B420094C519 /* RouterSCD.hpp */,
-				8FE160272443F99D00630122 /* PrimalExtractor.hpp */,
 				8FC362322434A95F00B68635 /* ThreadPool.hpp */,
 				8FF890B323F8F1B1005FA41E /* Problem.hpp */,
 				8FE9E84323FB8B10005B203C /* Solution.hpp */,
@@ -132,10 +128,8 @@
 				8FE2036023FA667200822791 /* ILP.cpp */,
 				8FA66BBA2404BF2400CA0CCB /* LRH.cpp */,
 				8FB2A9792494D2DA003E1D3C /* CGLC.cpp */,
-				8F575BE32453D26D007BBE4D /* Allocator.cpp */,
 				8FB3CCB82430E66B005156D4 /* PureGH.cpp */,
 				8F69CFF2242B4AFB0094C519 /* RouterSCD.cpp */,
-				8FE160262443F99D00630122 /* PrimalExtractor.cpp */,
 			);
 			path = Approach;
 			sourceTree = "<group>";
@@ -250,7 +244,6 @@
 				8FB2A97A2494D2DA003E1D3C /* CGLC.cpp in Sources */,
 				8FE9E84423FB8B10005B203C /* Solution.cpp in Sources */,
 				8FC362332434A95F00B68635 /* ThreadPool.cpp in Sources */,
-				8FE160282443F99D00630122 /* PrimalExtractor.cpp in Sources */,
 				8FD2937D24750C0F006A9A44 /* LP.cpp in Sources */,
 				8FE2036123FA667200822791 /* ILP.cpp in Sources */,
 				8F69CFF3242B4AFB0094C519 /* RouterSCD.cpp in Sources */,
@@ -258,7 +251,6 @@
 				8FA66BBB2404BF2400CA0CCB /* LRH.cpp in Sources */,
 				8FB3CCBA2430E66B005156D4 /* PureGH.cpp in Sources */,
 				8FF890B423F8F1B1005FA41E /* Problem.cpp in Sources */,
-				8F575BE42453D26D007BBE4D /* Allocator.cpp in Sources */,
 				8FE1602B2444075D00630122 /* SolApprBase.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

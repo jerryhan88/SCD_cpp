@@ -6,13 +6,35 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Solver.hpp"
+#include "../../include/LRH.hpp"
 
 
 std::mutex lrh_mtx_vec;
 
+#define ALLOCATIOR_TIME_LIMIT 30
+
+ILOMIPINFOCALLBACK4(timeLimitCallback,
+                    IloNum,   timeLimit,
+                    IloNum*,   minGap,
+                    IloNum*,   lastUpdatedST,
+                    IloBool*,  aborted) {
+
+    if ( !(*aborted) && hasIncumbent()) {
+        IloNum gap = getMIPRelativeGap();
+        if (*minGap - gap > 0.01) {
+            *minGap = gap;
+            *lastUpdatedST = getCplexTime();
+        }
+        //
+        IloNum timeUsed = getCplexTime() - *lastUpdatedST;
+        if ( timeUsed > timeLimit ) {
+            *aborted = IloTrue;
+            abort();
+        }
+    }
+}
+
 Solution* LRH::solve() {
-    build_allocator();
     build_extractor();
     //
     std::cout << "\t" << "The LP model has been build " << TimeTracker::get_curTime();
@@ -357,7 +379,7 @@ void LRH::solve_rutModels() {
 }
 
 void LRH::build_extractor() {
-    pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
+    pex = new PrimalExtractor(prob, lrh_x_aeij, lrh_u_aei);
 }
 
 void LRH::solve_pexModel() {
@@ -400,5 +422,154 @@ void LRH::logging(std::string indicator, std::string note) {
         char log[_log.size() + 1];
         std::strcpy(log, _log.c_str());
         appendRow(logPath, log);
+    }
+}
+
+
+Allocator::Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek) {
+    this->prob = prob;
+    //
+    eta_y_ak = new_inv_ak(prob, env, 'I');
+    eta_z_aek = new_inv_aek(prob, env, 'I');
+    this->lrh_l_aek = lrh_l_aek;
+    //
+    build();
+    //
+    etaCplex->use(timeLimitCallback(env, ALLOCATIOR_TIME_LIMIT, &minGap, &lastUpdatedST, &aborted));
+}
+
+void Allocator::build() {
+    etaModel = new IloModel(env);
+    //
+    IloExpr objF = eta_y_ak[0][0];  // this function is a dummy; later the objective will be updated
+    etaModel->add(IloMinimize(env, objF));
+    objF.end();
+    //
+    BaseMM::def_ETA_cnsts(prob, env, eta_y_ak, eta_z_aek, etaModel);
+    //
+    etaCplex = new IloCplex(*etaModel);
+    etaCplex->setOut(env.getNullStream());
+}
+
+void Allocator::update() {
+    // update coefficient associated with lambda values
+    IloExpr objF(env);
+    for (int k: prob->K) {
+        for (int a : prob->A) {
+            for (int e: prob->E_a[a]) {
+                objF += prob->r_k[k] * prob->p_ae[a][e] * eta_z_aek[a][e][k];
+            }
+            objF -= prob->r_k[k] * eta_y_ak[a][k];
+        }
+    }
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K_ae[a][e]) {
+                objF += lrh_l_aek[a][e][k] * eta_y_ak[a][k];
+                objF -= lrh_l_aek[a][e][k] * eta_z_aek[a][e][k];
+            }
+        }
+    }
+    etaCplex->getObjective().setExpr(objF);
+    objF.end();
+    //
+    minGap = DBL_MAX;
+    lastUpdatedST = 0.0;
+    aborted = IloFalse;
+}
+
+void Allocator::getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek) {
+    try {
+        *L1_V = -etaCplex->getObjValue();
+        for (int a: prob->A) {
+            for (int k: prob->K) {
+                lrh_y_ak[a][k] = etaCplex->getValue(eta_y_ak[a][k]);
+            }
+            for (int e: prob->E_a[a]) {
+                for (int k: prob->K) {
+                    lrh_z_aek[a][e][k] = etaCplex->getValue(eta_z_aek[a][e][k]);
+                }
+            }
+        }
+    } catch (IloException& e) {
+        throw "the etaModel is not solved";
+    }
+    if (etaCplex->getStatus() != IloAlgorithm::Optimal) {
+        std::cout << "\tthe etaModel is not solved, but the solution is not optimal" << std::endl;
+    }
+}
+
+
+void PrimalExtractor::build() {
+    pexModel = new IloModel(env);
+    //
+    IloExpr objF(env);
+    for (int k: prob->K) {
+        for (int a : prob->A) {
+            objF += prob->r_k[k] * pex_y_ak[a][k];
+            for (int e: prob->E_a[a]) {
+                objF -= prob->r_k[k] * prob->p_ae[a][e] * pex_z_aek[a][e][k];
+            }
+        }
+    }
+    pexModel->add(IloMaximize(env, objF));
+    objF.end();
+    //
+    BaseMM::def_ETA_cnsts(prob, env, pex_y_ak, pex_z_aek, pexModel);
+    char buf[2048];
+    IloExpr linExpr(env);
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K_ae[a][e]) {
+                linExpr.clear();
+                sprintf(buf, "CC(%d)(%d)(%d)", a, e, k);
+                linExpr += pex_y_ak[a][k];
+                double sumX = 0.0;
+                linExpr -= pex_z_aek[a][e][k];
+                pex_COM_cnsts->add(linExpr <= sumX);
+                (*pex_COM_cnsts)[pex_COM_cnsts->getSize() - 1].setName(buf);
+                pex_COM_cnsts_index[a][e][k] = pex_COM_cnsts->getSize() - 1;
+            }
+        }
+    }
+    linExpr.end();
+    pexModel->add(*pex_COM_cnsts);
+    pexCplex = new IloCplex(*pexModel);
+    pexCplex->setOut(env.getNullStream());
+    pexCplex->setWarning(env.getNullStream());
+}
+
+void PrimalExtractor::update() {
+    IloExpr linExpr(env);
+    for (int a : prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K_ae[a][e]) {
+                long cnsts_id = pex_COM_cnsts_index[a][e][k];
+                double sumX = 0.0;
+                for (int j: prob->N_ae[a][e]) {
+                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+                }
+                (*pex_COM_cnsts)[cnsts_id].setUB(sumX);
+            }
+        }
+    }
+}
+
+void PrimalExtractor::getSol(Solution *sol) {
+    for (int a: prob->A) {
+        for (int k: prob->K) {
+            sol->y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
+        }
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                sol->z_aek[a][e][k] = pexCplex->getValue(pex_z_aek[a][e][k]);
+            }
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    sol->x_aeij[a][e][i][j] = lrh_x_aeij[a][e][i][j];
+                }
+                sol->u_aei[a][e][i] = lrh_u_aei[a][e][i];
+            }
+        }
     }
 }

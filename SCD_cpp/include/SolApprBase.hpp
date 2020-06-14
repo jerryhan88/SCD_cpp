@@ -26,6 +26,9 @@
 #define LP_TIME_LIMIT 1800
 
 typedef std::tuple<int, int, int, int> iiiiTup;
+typedef std::tuple<int, int, int, double> iiidTup;
+typedef std::tuple<int, double> idTup;
+
 
 
 class SolApprBase {

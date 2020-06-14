@@ -6,7 +6,7 @@
 //  Copyright © 2020 Chung-Kyun HAN. All rights reserved.
 //
 
-#include "../../include/Solver.hpp"
+#include "../../include/OtherSolvers.hpp"
 
 Solution* LP::solve() {
     unsigned long TiLim = LP_TIME_LIMIT < time_limit_sec ? LP_TIME_LIMIT : time_limit_sec;

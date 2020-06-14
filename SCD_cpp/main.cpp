@@ -19,8 +19,9 @@
 #include "include/Problem.hpp"
 #include "include/Solution.hpp"
 #include "include/SolApprBase.hpp"
-//#include "include/BaseMM.hpp"
-#include "include/Solver.hpp"
+#include "include/OtherSolvers.hpp"
+#include "include/LRH.hpp"
+#include "include/CGLC.hpp"
 #include "include/ThreadPool.hpp"
 
 #include "ck_util/util.hpp"         // from util
