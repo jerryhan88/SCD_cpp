@@ -64,6 +64,18 @@ public:
     }
     void rm_build();
     Solution* solve();
+    ~CGLC() {
+        delete_inv_ak(prob, rm_y_ak);
+        delete rm_th_w;
+        delete rm_ONE_cnsts;
+        for (int a: prob->A) {
+            delete [] rm_ONE_cnsts_index[a];
+        }
+        delete [] rm_ONE_cnsts_index;
+        //
+        delete rmCplex;
+        delete rmModel;
+    }
     
 private:
     void init_cols();

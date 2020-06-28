@@ -15,6 +15,9 @@ void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh
     for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
         int j = prob->RP_ae[a][e]->n_k[k];
         for (int i: prob->RP_ae[a][e]->N) {
+            if (!(rutMM->bool_x_ij[i][j])) {
+                continue;
+            }
             objF += lrh_l_aek[a][e][*it] * rutMM->x_ij[i][j];
         }
         k++;
@@ -41,7 +44,11 @@ void getSol_rutMM(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, doub
         *rut_objV = -rutMM->cplex->getObjValue();
         for (int i: rutMM->prob->N) {
             for (int j: rutMM->prob->N) {
-                rut_x_ij[i][j] = rutMM->cplex->getValue(rutMM->x_ij[i][j]);
+                if (rutMM->bool_x_ij[i][j]) {
+                    rut_x_ij[i][j] = rutMM->cplex->getValue(rutMM->x_ij[i][j]);
+                } else {
+                    rut_x_ij[i][j] = 0.0;
+                }
             }
             rut_u_i[i] = rutMM->cplex->getValue(rutMM->u_i[i]);
         }

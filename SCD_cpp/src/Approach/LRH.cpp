@@ -35,8 +35,6 @@ ILOMIPINFOCALLBACK4(timeLimitCallback,
 }
 
 Solution* LRH::solve() {
-    build_extractor();
-    //
     std::cout << "\t" << "The LP model has been build " << TimeTracker::get_curTime();
     logging("Begin_Initialization", " ");
     init_LMs();

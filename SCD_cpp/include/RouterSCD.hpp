@@ -117,6 +117,10 @@ public:
         this->rutCplex = rutAlgo->cplex;
         gh = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
     }
+    ~RouterBnC() {
+        delete rutAlgo;
+        delete gh;
+    }
     //
     void update();
     void solve();
@@ -144,6 +148,9 @@ public:
             double ***lrh_l_aek,
             std::string rutLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
         rutAlgo = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
+    }
+    ~RouterGH() {
+        delete rutAlgo;
     }
     //
     void update();

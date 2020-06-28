@@ -55,7 +55,7 @@ int main(int argc, const char * argv[]) {
         time_limit_sec = std::stoi(valueOf(arguments, "-t"));
     }
     if (hasOption(arguments, "-la")) {
-        lp_algo = std::stoi(valueOf(arguments, "-la"));
+        lp_algo = valueOf(arguments, "-la");
     }
     if (hasOption(arguments, "-ef")) {
         enforcementMode = true;
@@ -69,12 +69,12 @@ int main(int argc, const char * argv[]) {
     //
     std::string appr_name_base = appr_name.substr(0, appr_name.find_first_of("-"));
     std::vector<std::string> probFileNames = read_directory(prob_dpath, ".json");
+    Problem *prob;
     for (std::string fn: probFileNames) {
         std::string prob_fpath(prob_dpath + "/" + fn);
         std::cout << prob_fpath << std::endl;
         //
         std::cout << "\tprob_read_start; " << TimeTracker::get_curTime();
-        Problem *prob;
         prob = Problem::read_json(prob_fpath);
         prob->gen_aeProbs();
         std::string postfix = prob->problemName;
@@ -103,17 +103,16 @@ int main(int argc, const char * argv[]) {
         std::cout << "\t" << appr_name << "; " << postfix << "; " << TimeTracker::get_curTime();
         //
         TimeTracker tt;
-        SolApprBase *solAppr = nullptr;
         Solution *sol;
         if (appr_name_base == "LP") {
-            solAppr = new LP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
-            sol = solAppr->solve();
+            LP solAppr = LP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
+            sol = solAppr.solve();
             sol->writeSolCSV(fpo.solPathCSV);
-            delete solAppr; delete sol;
+            delete sol;
             continue;
         } else if (appr_name_base == "ILP") {
-            solAppr = new ILP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
-            sol = solAppr->solve();
+            ILP solAppr = ILP(prob, &tt, time_limit_sec, numThreads, fpo.logPath, fpo.lpPath, lp_algo);
+            sol = solAppr.solve();
         } else if (appr_name_base == "LRH" || appr_name_base == "CGLC") {
             std::vector<std::string> tokens = parseWithDelimiter(appr_name, "-");
             assert (2 == tokens.size());
@@ -155,30 +154,31 @@ int main(int argc, const char * argv[]) {
             system(buf);
             //
             if (appr_name_base == "LRH") {
-                solAppr = new LRH(prob, &tt,
-                time_limit_sec, numThreads,
-                fpo.logPath, fpo.lpPath, lp_algo,
-                _router,
-                dual_gap_limit, num_iter_limit, no_improvement_limit);
+                LRH solAppr = LRH(prob, &tt,
+                                    time_limit_sec, numThreads,
+                                    fpo.logPath, fpo.lpPath, lp_algo,
+                                    _router,
+                                    dual_gap_limit, num_iter_limit, no_improvement_limit);
+                sol = solAppr.solve();
+                
             } else {
                 assert(appr_name_base == "CGLC");
-                solAppr = new CGLC(prob, &tt,
-                                time_limit_sec, numThreads,
-                                fpo.logPath, fpo.lpPath, lp_algo,
-                                _router,
-                                dual_gap_limit, num_iter_limit, no_improvement_limit);
+                CGLC solAppr = CGLC(prob, &tt,
+                                    time_limit_sec, numThreads,
+                                    fpo.logPath, fpo.lpPath, lp_algo,
+                                    _router,
+                                    dual_gap_limit, num_iter_limit, no_improvement_limit);
+                sol = solAppr.solve();
             }
-            sol = solAppr->solve();
         } else if (appr_name_base == "PureGH") {
-            solAppr = new PureGH(prob, &tt, time_limit_sec, numThreads, fpo.logPath);
-            
-            sol = solAppr->solve();
+            PureGH solAppr = PureGH(prob, &tt, time_limit_sec, numThreads, fpo.logPath);
+            sol = solAppr.solve();
         } else {
             sol = nullptr;
         }
         sol->writeSolCSV(fpo.solPathCSV);
         sol->writeSolTXT(fpo.solPathTXT);
-        delete solAppr;
         delete sol;
+        delete prob;
     }
 }

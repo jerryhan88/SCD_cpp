@@ -37,7 +37,6 @@ public:
     TimeTracker *tt;
     unsigned long time_limit_sec;
     std::string logPath;
-//    ThreadPool &builderPool = ThreadPool::getInstance(8);
     ThreadPool &routerPool = ThreadPool::getInstance(1);
     //
     SolApprBase(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec, int numThreads, std::string logPath) {
@@ -58,7 +57,7 @@ public:
 
 IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType);
 IloNumVar*** new_inv_aek(Problem *prob, IloEnv &env, char vType);
-IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType);
+IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType, bool ****_x_aeij);
 IloNumVar*** new_inv_aei(Problem *prob, IloEnv &env);
 
 
@@ -79,6 +78,7 @@ public:
     IloNumVar **y_ak, ***z_aek, ****x_aeij, ***u_aei;
     IloRangeArray *COM_cnsts;
     long ***COM_cnsts_index;
+    bool ****_x_aeij;
     //
     BaseMM(Problem *prob, TimeTracker *tt,
            unsigned long time_limit_sec, int numThreads,
@@ -90,9 +90,27 @@ public:
         this->lpPath = lpPath;
         this->pathPrefix = lpPath.substr(0, lpPath.find(".lp"));
         //
+        _x_aeij = new bool***[prob->A.size()];
+        for (int a: prob->A) {
+            _x_aeij[a] = new bool**[prob->E_a[a].size()];
+            for (int e: prob->E_a[a]) {
+                _x_aeij[a][e] = new bool*[prob->cN.size()];
+                for (int i = 0; i < prob->cN.size(); i++) {
+                    _x_aeij[a][e][i] = new bool[prob->cN.size()];
+                }
+                for (int i: prob->N_ae[a][e]) {
+                    for (int j: prob->N_ae[a][e]) {
+                        _x_aeij[a][e][i][j] = true;
+                    }
+                }
+                
+            }
+        }
+        preprocessing();
+        //
         y_ak = new_inv_ak(prob, env, vType);
         z_aek = new_inv_aek(prob, env, vType);
-        x_aeij = new_inv_aeij(prob, env, vType);
+        x_aeij = new_inv_aeij(prob, env, vType, _x_aeij);
         u_aei = new_inv_aei(prob, env);
         COM_cnsts = new IloRangeArray(env);
         COM_cnsts_index = new long**[prob->A.size()];
@@ -112,6 +130,17 @@ public:
         }
     }
     ~BaseMM() {
+        for (int a: prob->A) {
+            for (int e: prob->E_a[a]) {
+                for (int i = 0; i < prob->cN.size(); i++) {
+                    delete [] _x_aeij[a][e][i];
+                }
+                delete [] _x_aeij[a][e];
+            }
+            delete [] _x_aeij[a];
+        }
+        delete [] _x_aeij;
+        //
         delete_inv_ak(prob, y_ak);
         delete_inv_aek(prob, z_aek);
         delete_inv_aeij(prob, x_aeij);
@@ -189,7 +218,7 @@ public:
     
 protected:
     void build_baseModel();
-    void def_preprocessing();
+    void preprocessing();
     void def_objF();
     void def_RUT_cnsts();
     void def_FC_cnsts_aeGiven(int a, int e);

@@ -140,15 +140,9 @@ public:
         lrh_u_aei = new_dbl_aei(prob);
         lrh_l_aek = new_dbl_aek(prob);
         //
-        
-//        if (_EXTRACTOR == "RF") {
-//            pex = new RouteFixPE(prob, lrh_x_aeij, lrh_u_aei);
-//        } else {
-//            assert (_EXTRACTOR == "CG");
-//            pex = new ColGenPE(prob, lrh_x_aeij, lrh_u_aei);
-//        }
         build_allocator();
         build_rutModels();
+        build_extractor();
         //
         bestSol = nullptr;
         //

@@ -9,8 +9,6 @@
 #include "../../include/SolApprBase.hpp"
 
 
-//std::mutex sab_mtx;
-
 IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
@@ -44,7 +42,7 @@ IloNumVar*** new_inv_aek(Problem *prob, IloEnv &env, char vType) {
     return z_aek;
 }
 
-IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType) {
+IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType, bool ****_x_aeij) {
     IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
     char buf[DEFAULT_BUFFER_SIZE];
@@ -58,6 +56,9 @@ IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType) {
             }
             for (int i: prob->N_ae[a][e]) {
                 for (int j: prob->N_ae[a][e]) {
+                    if (!_x_aeij[a][e][i][j]) {
+                        continue;
+                    }
                     sprintf(buf, "x(%d)(%d)(%d)(%d)", a, e, i, j);
                     x_aeij[a][e][i][j] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
                 }
@@ -125,16 +126,14 @@ void delete_inv_aei(Problem *prob, IloNumVar ***inv_aei) {
 }
 
 void BaseMM::build_baseModel() {
-    def_preprocessing();
-    //
     def_objF();
     def_ETA_cnsts(prob, env, y_ak, z_aek, baseModel);
     def_RUT_cnsts();
     def_COM_cnsts();
 }
-void BaseMM::def_preprocessing() {
-    char buf[DEFAULT_BUFFER_SIZE];
-    IloRangeArray cnsts(env);
+
+
+void BaseMM::preprocessing() {
     int a, e, i, j, o, d;
     std::set<iiiiTup> invalid_dvX;
     //
@@ -207,11 +206,8 @@ void BaseMM::def_preprocessing() {
     //
     for (iiiiTup ele: invalid_dvX) {
         std::tie(a, e, i, j) = ele;
-        cnsts.add(x_aeij[a][e][i][i] == 0);
-        sprintf(buf, "pP(%d)(%d)(%d)(%d)", a, e, i, j);
-        cnsts[cnsts.getSize() - 1].setName(buf);
+        _x_aeij[a][e][i][i] = false;
     }
-    baseModel->add(cnsts);
 }
 
 void BaseMM::def_objF() {
@@ -229,11 +225,6 @@ void BaseMM::def_objF() {
 }
 
 void BaseMM::def_RUT_cnsts() {
-//    auto build_rutConsts = [](BaseMM *mm, int a, int e) {
-//        mm->def_FC_cnsts_aeGiven(a, e);
-//        mm->def_AT_cnsts_aeGiven(a, e);
-//    };
-    
     // Routing constraints
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
@@ -241,37 +232,36 @@ void BaseMM::def_RUT_cnsts() {
             def_AT_cnsts_aeGiven(a, e);
         }
     }
-    
-//    std::vector<std::shared_future<void>> threadJobs;
-//    for (int a : prob->A) {
-//        for (int e: prob->E_a[a]) {
-//            std::shared_future<void> returnValue = (std::shared_future<void>) routerPool.push(build_rutConsts, this, a, e);
-//            threadJobs.push_back(returnValue);
-//        }
-//    }
-//    std::for_each(threadJobs.begin(), threadJobs.end(), [](std::shared_future<void> x){ x.get(); });
-    
 }
 
 void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     char buf[DEFAULT_BUFFER_SIZE];
     IloRangeArray cnsts(env);
     IloExpr linExpr(env);
+    int i, j, o, d;
     //
     // Initiate flow
     //
     linExpr.clear();
     sprintf(buf, "iFO(%d)(%d)", a, e);
-    for (int j: prob->N_ae[a][e]) {
-        linExpr += x_aeij[a][e][prob->o_ae[a][e]][j];
+    o = prob->o_ae[a][e];
+    for (int j0: prob->N_ae[a][e]) {
+        if (!_x_aeij[a][e][o][j0]) {
+            continue;
+        }
+        linExpr += x_aeij[a][e][o][j0];
     }
     cnsts.add(linExpr == 1);
     cnsts[cnsts.getSize() - 1].setName(buf);
     //
     linExpr.clear();
     sprintf(buf, "iFD(%d)(%d)", a, e);
-    for (int j: prob->N_ae[a][e]) {
-        linExpr += x_aeij[a][e][j][prob->d_ae[a][e]];
+    d = prob->d_ae[a][e];
+    for (int i0: prob->N_ae[a][e]) {
+        if (!_x_aeij[a][e][i0][d]) {
+            continue;
+        }
+        linExpr += x_aeij[a][e][i0][d];
     }
     cnsts.add(linExpr == 1);
     cnsts[cnsts.getSize() - 1].setName(buf);
@@ -303,9 +293,12 @@ void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     cnsts.add(x_aeij[a][e][prob->d_ae[a][e]][prob->o_ae[a][e]] == 1);
     cnsts[cnsts.getSize() - 1].setName(buf);
     //
-    for (int i: prob->N_ae[a][e]) {
-        sprintf(buf, "NS(%d)(%d)(%d)", a, e, i);  // No Self Flow; tightening bounds
-        cnsts.add(x_aeij[a][e][i][i] == 0);
+    for (int i0: prob->N_ae[a][e]) {
+        if (!_x_aeij[a][e][i0][i0]) {
+            continue;
+        }
+        sprintf(buf, "NS(%d)(%d)(%d)", a, e, i0);  // No Self Flow; tightening bounds
+        cnsts.add(x_aeij[a][e][i0][i0] == 0);
         cnsts[cnsts.getSize() - 1].setName(buf);
     }
     //
@@ -314,11 +307,19 @@ void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     for (int k: prob->K_ae[a][e]) {
         linExpr.clear();
         sprintf(buf, "tFC(%d)(%d)(%d)", a, e, k);
-        for (int j: prob->N_ae[a][e]) {
-            linExpr += x_aeij[a][e][prob->n_k[k]][j];
+        i = prob->n_k[k];
+        for (int j0: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][i][j0]) {
+                continue;
+            }
+            linExpr += x_aeij[a][e][i][j0];
         }
-        for (int j: prob->N_ae[a][e]) {
-            linExpr -= x_aeij[a][e][j][prob->h_k[k]];
+        j = prob->h_k[k];
+        for (int i0: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][i0][j]) {
+                continue;
+            }
+            linExpr -= x_aeij[a][e][i0][j];
         }
         cnsts.add(linExpr <= 0);
         cnsts[cnsts.getSize() - 1].setName(buf);
@@ -326,25 +327,30 @@ void BaseMM::def_FC_cnsts_aeGiven(int a, int e) {
     //
     // Flow conservation
     //
-    for (int i: prob->PD_ae[a][e]) {
+    for (int i0: prob->PD_ae[a][e]) {
         linExpr.clear();
-        sprintf(buf, "FC_1(%d)(%d)(%d)", a, e, i);
-        for (int j: prob->N_ae[a][e]) {
-            linExpr += x_aeij[a][e][i][j];
+        sprintf(buf, "FC_1(%d)(%d)(%d)", a, e, i0);
+        for (int j0: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][i0][j0]) {
+                continue;
+            }
+            linExpr += x_aeij[a][e][i0][j0];
         }
         cnsts.add(linExpr <= 1);
         cnsts[cnsts.getSize() - 1].setName(buf);
         //
-        sprintf(buf, "FC(%d)(%d)(%d)", a, e, i);
-        for (int j: prob->N_ae[a][e]) {
-            linExpr -= x_aeij[a][e][j][i];
+        sprintf(buf, "FC(%d)(%d)(%d)", a, e, i0);
+        for (int j0: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][j0][i0]) {
+                continue;
+            }
+            linExpr -= x_aeij[a][e][j0][i0];
         }
         cnsts.add(linExpr == 0);
         cnsts[cnsts.getSize() - 1].setName(buf);
     }
     //
     linExpr.end();
-//    std::unique_lock<std::mutex> lock(sab_mtx);
     baseModel->add(cnsts);
 }
 
@@ -367,6 +373,9 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     for (int i: prob->N_ae[a][e]) {
         for (int j: prob->N_ae[a][e]) {
             if (i == prob->d_ae[a][e] && j == prob->o_ae[a][e]) {
+                continue;
+            }
+            if (!_x_aeij[a][e][i][j]) {
                 continue;
             }
             linExpr.clear();
@@ -412,6 +421,9 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
         linExpr -= u_aei[a][e][prob->n_k[k]];
         linExpr -= prob->M;
         for (int j: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][prob->n_k[k]][j]) {
+                continue;
+            }
             linExpr += prob->M * x_aeij[a][e][prob->n_k[k]][j];
         }
         cnsts.add(linExpr <= 0);
@@ -424,6 +436,9 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     sprintf(buf, "VL(%d)(%d)", a, e);
     for (int k: prob->K_ae[a][e]) {
         for (int j: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][j][prob->n_k[k]]) {
+                continue;
+            }
             linExpr += prob->v_k[k] * x_aeij[a][e][j][prob->n_k[k]];
         }
     }
@@ -436,6 +451,9 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     sprintf(buf, "WL(%d)(%d)", a, e);
     for (int k: prob->K_ae[a][e]) {
         for (int j: prob->N_ae[a][e]) {
+            if (!_x_aeij[a][e][j][prob->n_k[k]]) {
+                continue;
+            }
             linExpr += prob->w_k[k] * x_aeij[a][e][j][prob->n_k[k]];
         }
     }
@@ -452,6 +470,9 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
             if (i == prob->d_ae[a][e] and j == prob->o_ae[a][e]) {
                 continue;
             }
+            if (!_x_aeij[a][e][i][j]) {
+                continue;
+            }
             linExpr += prob->t_ij[i][j] * x_aeij[a][e][i][j];
         }
     }
@@ -459,7 +480,6 @@ void BaseMM::def_AT_cnsts_aeGiven(int a, int e) {
     cnsts[cnsts.getSize() - 1].setName(buf);
     //
     linExpr.end();
-//    std::unique_lock<std::mutex> lock(sab_mtx);
     baseModel->add(cnsts);
 }
 
@@ -474,6 +494,9 @@ void BaseMM::def_COM_cnsts() {
                 sprintf(buf, "CC(%d)(%d)(%d)", a, e, k);
                 linExpr += y_ak[a][k];
                 for (int j: prob->N_ae[a][e]) {
+                    if (!_x_aeij[a][e][j][prob->n_k[k]]) {
+                        continue;
+                    }
                     linExpr -= x_aeij[a][e][j][prob->n_k[k]];
                 }
                 linExpr -= z_aek[a][e][k];
