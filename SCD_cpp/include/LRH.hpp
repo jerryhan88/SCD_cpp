@@ -19,6 +19,7 @@
 #include "Problem.hpp"
 #include "Solution.hpp"
 
+class LRH;
 
 class Allocator {
 public:
@@ -27,24 +28,26 @@ public:
     IloEnv env;
     IloModel *etaModel; // Evaluation on Task Assingment
     IloCplex *etaCplex;
-    IloNumVar **eta_y_ak, ***eta_z_aek;
+    IloNumVar **eta_y_ary, ***eta_z_ary;
     //
     IloNum minGap, lastUpdatedST;
     IloBool aborted;
     //
-    double ***lrh_l_aek;
+    LRH *lrh;
     //
-    Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek);
+    Allocator(Problem *prob, TimeTracker *tt, LRH *lrh);
+    
+    
     ~Allocator() {
-        delete_inv_ak(prob, eta_y_ak);
-        delete_inv_aek(prob, eta_z_aek);
+        del_ak_inv(prob, eta_y_ary);
+        del_aek_inv(prob, eta_z_ary);
         //
         delete etaCplex; delete etaModel;
         env.end();
     }
     void build();
     void update();
-    void getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek);
+    void getSol(double *L1_V, double **lrh_y_ary, double ***lrh_z_ary);
 };
 
 class PrimalExtractor {
@@ -55,34 +58,16 @@ public:
     IloModel *pexModel;
     IloCplex *pexCplex;
     //
-    double ****lrh_x_aeij, ***lrh_u_aei;
+    LRH *lrh;
     //
-    IloNumVar **pex_y_ak, ***pex_z_aek;
+    IloNumVar **pex_y_ary, ***pex_z_ary;
     IloRangeArray *pex_COM_cnsts;
     long ***pex_COM_cnsts_index;
     //
-    PrimalExtractor(Problem *prob, double ****lrh_x_aeij, double ***lrh_u_aei) {
-        this->prob = prob;
-        this->lrh_x_aeij = lrh_x_aeij;
-        this->lrh_u_aei = lrh_u_aei;
-        //
-        pex_y_ak = new_inv_ak(prob, env, 'I');
-        pex_z_aek = new_inv_aek(prob, env, 'I');
-        //
-        pex_COM_cnsts = new IloRangeArray(env);
-        pex_COM_cnsts_index = new long**[prob->A.size()];
-        for (int a : prob->A) {
-            pex_COM_cnsts_index[a] = new long*[prob->E_a[a].size()];
-            for (int e: prob->E_a[a]) {
-                pex_COM_cnsts_index[a][e] = new long[prob->K.size()];
-            }
-        }
-        build();
-        
-    }
+    PrimalExtractor(Problem *prob, LRH *lrh);
     ~PrimalExtractor() {
-        delete_inv_ak(prob, pex_y_ak);
-        delete_inv_aek(prob, pex_z_aek);
+        del_ak_inv(prob, pex_y_ary);
+        del_aek_inv(prob, pex_z_ary);
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
                 delete [] pex_COM_cnsts_index[a][e];
@@ -96,9 +81,11 @@ public:
         env.end();
     }
     void build();
+    void def_ETA_cnsts();
     void update();
     void getSol(Solution *sol);
 };
+
 
 class LRH : public BaseMM {
 public:
@@ -109,7 +96,12 @@ public:
     double L1_V, L2_V, L_V, L_V_star, F_V, F_V_star;
     double ut;
     int numIters, noUpdateCounter_L;
-    double **lrh_y_ak, ***lrh_z_aek, ****lrh_x_aeij, ***lrh_u_aei, ***lrh_l_aek;
+    double **lrh_y_ary, ***lrh_z_ary, ****lrh_x_ary, ***lrh_u_ary, ***lrh_l_ary;
+    std::map<iiTup, double> lrh_y_map;
+    std::map<iiiTup, double> lrh_z_map;
+    std::map<iiiiTup, double> lrh_x_map;
+    std::map<iiiTup, double> lrh_u_map;
+    std::map<iiiTup, double> lrh_l_map;
     //
     Allocator *alr;
     std::vector<std::vector<RouterSCD*>> routers;
@@ -134,11 +126,11 @@ public:
         noUpdateCounter_L = 0;
         numIters = 0;
         //
-        lrh_y_ak = new_dbl_ak(prob);
-        lrh_z_aek = new_dbl_aek(prob);
-        lrh_x_aeij = new_dbl_aeij(prob);
-        lrh_u_aei = new_dbl_aei(prob);
-        lrh_l_aek = new_dbl_aek(prob);
+        gen_y_dbl();
+        gen_z_dbl();
+        gen_x_dbl();
+        gen_u_dbl();
+        gen_l_dbl();
         //
         build_allocator();
         build_rutModels();
@@ -154,11 +146,11 @@ public:
         }
     }
     ~LRH() {
-        delete_dbl_ak(prob, lrh_y_ak);
-        delete_dbl_aek(prob, lrh_z_aek);
-        delete_dbl_aeij(prob, lrh_x_aeij);
-        delete_dbl_aei(prob, lrh_u_aei);
-        delete_dbl_aek(prob, lrh_l_aek);
+        del_y_dbl();
+        del_z_dbl();
+        del_x_dbl();
+        del_u_dbl();
+        del_l_dbl();
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
                 delete routers[a][e];
@@ -176,8 +168,34 @@ public:
     void init_LMs();
     void solve_dualProblem();
     bool updateLMs();
-
+    //
+    void set_y_dbl(int a, int k, double v);
+    void set_z_dbl(int a, int e, int k, double v);
+    //
+    double get_y_dbl(int a, int k);
+    double get_z_dbl(int a, int e, int k);
+    double get_x_dbl(int a, int e, int i, int j);
+    double get_u_dbl(int a, int e, int i);
+    double get_l_dbl(int a, int e, int k);
 private:
+    void gen_y_dbl();
+    void del_y_dbl();
+    //
+    void gen_z_dbl();
+    void del_z_dbl();
+    //
+    void gen_x_dbl();
+    void del_x_dbl();
+    void set_x_dbl(int a, int e, int i, int j, double v);
+    //
+    void gen_u_dbl();
+    void del_u_dbl();
+    void set_u_dbl(int a, int e, int i, double v);
+    //
+    void gen_l_dbl();
+    void del_l_dbl();
+    void set_l_dbl(int a, int e, int k, double v);
+    //
     void build_allocator();
     void solve_etaModel();
     //
@@ -189,6 +207,7 @@ private:
     //
     void logging(std::string indicator, std::string note);
 };
+
 
 
 #endif /* LRH_h */

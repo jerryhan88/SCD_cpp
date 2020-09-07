@@ -14,13 +14,12 @@
 #include <ilcplex/ilocplex.h>
 
 #include "Problem.hpp"
-//#include "BaseMM.hpp"
 
 #include "ck_route/Router.hpp"     // from BnC_CPLEX
 #include "ck_route/Other.hpp"     // from BnC_CPLEX
 #include "ck_util/util.hpp"         // from util
 
-void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh_l_aek);
+void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh_l_ary);
 void run_rutAlgo(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, double *rut_u_i);
 
 class RouterSCD {
@@ -30,7 +29,8 @@ public:
     unsigned long time_limit_sec;
     rut::Problem *rutProb;
     int a, e;
-    double ***lrh_l_aek;
+    double ***lrh_l_ary;
+    std::map<iiiTup, double> *lrh_l_map;
     double **rut_x_ij, *rut_u_i;
     double rut_objV;
     //
@@ -38,14 +38,16 @@ public:
     //
     RouterSCD(Problem *prob, TimeTracker *tt,
               unsigned long time_limit_sec,
-              int a, int e, double ***lrh_l_aek) {
+              int a, int e,
+              double ***lrh_l_ary, std::map<iiiTup, double> *lrh_l_map) {
         this->prob = prob;
         this->tt = tt;
         this->time_limit_sec = time_limit_sec;
         rutProb = prob->RP_ae[a][e];
         this->a = a;
         this->e = e;
-        this->lrh_l_aek = lrh_l_aek;
+        this->lrh_l_ary = lrh_l_ary;
+        this->lrh_l_map = lrh_l_map;
         //
         rut_x_ij = new double*[rutProb->N.size()];
         rut_u_i = new double[rutProb->N.size()];
@@ -83,8 +85,8 @@ public:
     //
     RouterILP(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
-              double ***lrh_l_aek,
-              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
+              double ***lrh_l_ary, std::map<iiiTup, double> *lrh_l_map,
+              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_ary, lrh_l_map) {
         this->rutLogPath = rutLogPath;
         rutAlgo = new rmm::ILP(rutProb, tt, time_limit_sec, rutLogPath, rutLpLogPath, true);
         rutAlgo->cplex->setWarning(rutAlgo->env.getNullStream());
@@ -110,8 +112,8 @@ public:
     //
     RouterBnC(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
-              double ***lrh_l_aek,
-              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
+              double ***lrh_l_ary, std::map<iiiTup, double> *lrh_l_map,
+              std::string rutLogPath, std::string rutLpLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_ary, lrh_l_map) {
         rutAlgo = new rmm::BnC(rutProb, tt, time_limit_sec, rutLogPath, rutLpLogPath, cut_names, true, cutManagerType, isLocalCutAdd);
         rutAlgo->cplex->setWarning(rutAlgo->env.getNullStream());
         this->rutCplex = rutAlgo->cplex;
@@ -127,13 +129,13 @@ public:
     void getSol();
 };
 
-class RouterBnCoc: public RouterBnC {
+class RouterBnCbc: public RouterBnC {
 public:
     //
-    RouterBnCoc(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
+    RouterBnCbc(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
               int a, int e,
-              double ***lrh_l_aek,
-              std::string rutLogPath, std::string rutLpLogPath): RouterBnC(prob, tt, time_limit_sec, a, e, lrh_l_aek, rutLogPath, rutLpLogPath) {
+              double ***lrh_l_ary, std::map<iiiTup, double> *lrh_l_map,
+              std::string rutLogPath, std::string rutLpLogPath): RouterBnC(prob, tt, time_limit_sec, a, e, lrh_l_ary, lrh_l_map, rutLogPath, rutLpLogPath) {
     }
     //
     void update();
@@ -145,8 +147,8 @@ public:
     //
     RouterGH(Problem *prob, TimeTracker *tt, unsigned long time_limit_sec,
             int a, int e,
-            double ***lrh_l_aek,
-            std::string rutLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_aek) {
+            double ***lrh_l_ary, std::map<iiiTup, double> *lrh_l_map,
+            std::string rutLogPath): RouterSCD(prob, tt, time_limit_sec, a, e, lrh_l_ary, lrh_l_map) {
         rutAlgo = new rgh::InsertionHeuristic(rutProb, tt, time_limit_sec, rutLogPath);
     }
     ~RouterGH() {

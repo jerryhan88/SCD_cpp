@@ -9,7 +9,7 @@
 #include "../../include/RouterSCD.hpp"
 
 
-void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh_l_aek) {
+void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh_l_ary) {
     IloExpr objF(rutMM->env);
     int k = 0;
     for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
@@ -18,7 +18,7 @@ void update_objF(rmm::RouteMM *rutMM, Problem *prob, int a, int e, double ***lrh
             if (!(rutMM->bool_x_ij[i][j])) {
                 continue;
             }
-            objF += lrh_l_aek[a][e][*it] * rutMM->x_ij[i][j];
+            objF += lrh_l_ary[a][e][*it] * rutMM->x_ij[i][j];
         }
         k++;
     }
@@ -59,7 +59,7 @@ void getSol_rutMM(rmm::RouteMM *rutMM, double *rut_objV, double **rut_x_ij, doub
 
 
 void RouterILP::update() {
-    update_objF(rutAlgo, prob, a, e, lrh_l_aek);
+    update_objF(rutAlgo, prob, a, e, lrh_l_ary);
 }
 
 void RouterILP::solve() {
@@ -71,13 +71,13 @@ void RouterILP::getSol() {
 }
 
 void RouterBnC::update() {
-    update_objF(rutAlgo, prob, a, e, lrh_l_aek);
+    update_objF(rutAlgo, prob, a, e, lrh_l_ary);
     rutAlgo->clear_detectedCuts();
     //
     gh->initIH();
     int k = 0;
     for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
-        prob->RP_ae[a][e]->r_k[k] = lrh_l_aek[a][e][*it];
+        prob->RP_ae[a][e]->r_k[k] = lrh_l_ary[a][e][*it];
         k++;
     }
 }
@@ -92,14 +92,14 @@ void RouterBnC::getSol() {
     getSol_rutMM(rutAlgo, &rut_objV, rut_x_ij, rut_u_i);
 }
 
-void RouterBnCoc::update() {
-    update_objF(rutAlgo, prob, a, e, lrh_l_aek);
+void RouterBnCbc::update() {
+    update_objF(rutAlgo, prob, a, e, lrh_l_ary);
     rutAlgo->add_detectedCuts2MM();
     //
     gh->initIH();
     int k = 0;
     for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
-        prob->RP_ae[a][e]->r_k[k] = lrh_l_aek[a][e][*it];
+        prob->RP_ae[a][e]->r_k[k] = lrh_l_ary[a][e][*it];
         k++;
     }
 }
@@ -108,9 +108,16 @@ void RouterGH::update() {
     rutAlgo->initIH();
     //
     int k = 0;
-    for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
-        prob->RP_ae[a][e]->r_k[k] = lrh_l_aek[a][e][*it];
-        k++;
+    if (lrh_l_map->size() == 0) {
+        for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
+            prob->RP_ae[a][e]->r_k[k] = lrh_l_ary[a][e][*it];
+            k++;
+        }
+    } else {
+        for(std::set<int>::iterator it = prob->K_ae[a][e].begin(); it != prob->K_ae[a][e].end(); ++it) {
+            prob->RP_ae[a][e]->r_k[k] = (*lrh_l_map)[std::make_tuple(a, e, *it)];
+            k++;
+        }
     }
 }
 

@@ -22,21 +22,21 @@ public:
     std::string note;
     int lastUpdatedIter;
     //
-    double **y_ak, ***z_aek, ****x_aeij, ***u_aei;
+    double **y_ary, ***z_ary, ****x_ary, ***u_ary;
     //
     Solution(Problem *prob) {
         this->prob = prob;
         //
-        y_ak = new_dbl_ak(prob);
-        z_aek = new_dbl_aek(prob);
-        x_aeij = new_dbl_aeij(prob);
-        u_aei = new_dbl_aei(prob);
+        y_ary = new_ak_dbl(prob);
+        z_ary = new_aek_dbl(prob);
+        x_ary = new_aeij_dbl(prob);
+        u_ary = new_aei_dbl(prob);
     }
     ~Solution() {
-        delete_dbl_ak(prob, y_ak);
-        delete_dbl_aek(prob, z_aek);
-        delete_dbl_aeij(prob, x_aeij);
-        delete_dbl_aei(prob, u_aei);
+        del_ak_dbl(prob, y_ary);
+        del_aek_dbl(prob, z_ary);
+        del_aeij_dbl(prob, x_ary);
+        del_aei_dbl(prob, u_ary);
     }
     //
     void writeSolCSV(std::string solPathCSV);

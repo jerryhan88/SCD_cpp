@@ -8,122 +8,322 @@
 
 #include "../../include/Problem.hpp"
 
-#include <iostream>
 
-double** new_dbl_ak(Problem *prob) {
-    size_t numAgents, numTasks;
-    numAgents = prob->A.size();
-    numTasks = prob->K.size();
+IloNumVar** new_ak_inv(Problem *prob, IloEnv &env, char vType) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
-    double **dbl_ak = new double*[numAgents];
+    char buf[2048];
+    IloNumVar **ak_ary = new IloNumVar*[prob->A.size()];
     for (int a: prob->A) {
-        dbl_ak[a] = new double[numTasks];
+        ak_ary[a] = new IloNumVar[prob->K.size()];
         for (int k: prob->K) {
-            dbl_ak[a][k] = 0.0;
+            sprintf(buf, "y(%d)(%d)", a, k);
+            ak_ary[a][k] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
         }
     }
-    return dbl_ak;
+    return ak_ary;
+}
+void new_ak_inv(Problem *prob, IloEnv &env, char vType, std::map<iiTup, IloNumVar> &ak_map) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[2048];
+    for (int a: prob->A) {
+        for (int k: prob->K) {
+            sprintf(buf, "y(%d)(%d)", a, k);
+            ak_map[std::make_tuple(a, k)] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+        }
+    }
+}
+void del_ak_inv(Problem *prob, IloNumVar **ak_ary) {
+    for (int a: prob->A) {
+        delete [] ak_ary[a];
+    }
+    delete [] ak_ary;
 }
 
-double*** new_dbl_aek(Problem *prob) {
-    size_t numAgents, numTasks, numRR;
-    numAgents = prob->A.size();
-    numTasks = prob->K.size();
+IloNumVar*** new_aek_inv(Problem *prob, IloEnv &env, char vType) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
-    double ***dbl_aek = new double**[numAgents];
+    char buf[2048];
+    IloNumVar ***aek_ary = new IloNumVar**[prob->A.size()];
     for (int a: prob->A) {
-        numRR = prob->E_a[a].size();
-        dbl_aek[a] = new double*[numRR];
+        aek_ary[a] = new IloNumVar*[prob->E_a[a].size()];
         for (int e: prob->E_a[a]) {
-            dbl_aek[a][e] = new double[numTasks];
+            aek_ary[a][e] = new IloNumVar[prob->K.size()];
             for (int k: prob->K) {
-                dbl_aek[a][e][k] = 0.0;
+                sprintf(buf, "z(%d)(%d)(%d)", a, e, k);
+                aek_ary[a][e][k] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
             }
         }
     }
-    return dbl_aek;
+    return aek_ary;
+}
+void new_aek_inv(Problem *prob, IloEnv &env, char vType, std::map<iiiTup, IloNumVar> &aek_map) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[2048];
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                sprintf(buf, "z(%d)(%d)(%d)", a, e, k);
+                aek_map[std::make_tuple(a, e, k)] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+            }
+        }
+    }
+}
+void del_aek_inv(Problem *prob, IloNumVar ***aek_ary) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] aek_ary[a][e];
+        }
+        delete [] aek_ary[a];
+    }
+    delete [] aek_ary;
 }
 
-double**** new_dbl_aeij(Problem *prob) {
-    size_t numAgents, numNodes, numRR;
-    numAgents = prob->A.size();
-    numNodes = prob->cN.size();
+IloNumVar**** new_aeij_inv(Problem *prob, IloEnv &env, char vType, bool ****bool_x_aeij) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
     //
-    double ****dbl_aeij = new double***[numAgents];
+    char buf[2048];
+    IloNumVar ****aeij_ary = new IloNumVar***[prob->A.size()];
     for (int a: prob->A) {
-        numRR = prob->E_a[a].size();
-        dbl_aeij[a] = new double**[numRR];
+        aeij_ary[a] = new IloNumVar**[prob->E_a[a].size()];
         for (int e: prob->E_a[a]) {
-            dbl_aeij[a][e] = new double*[numNodes];
-            for (int i = 0; i < numNodes; i++) {
-                dbl_aeij[a][e][i] = new double[numNodes];
-                for (int j = 0; j < numNodes; j++) {
-                    dbl_aeij[a][e][i][j] = 0.0;
+            aeij_ary[a][e] = new IloNumVar*[prob->cN.size()];
+            for (int i = 0; i < prob->cN.size(); i++) {
+                aeij_ary[a][e][i] = new IloNumVar[prob->cN.size()];
+            }
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    if (!bool_x_aeij[a][e][i][j]) {
+                        continue;
+                    }
+                    sprintf(buf, "x(%d)(%d)(%d)(%d)", a, e, i, j);
+                    aeij_ary[a][e][i][j] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
+                }
+            }
+            
+        }
+    }
+    return aeij_ary;
+}
+void new_aeij_inv(Problem *prob, IloEnv &env, char vType, bool ****bool_x_aeij,
+                  std::map<iiiiTup, IloNumVar> &aeij_map) {
+    IloNumVar::Type ilo_vType = vType == 'I' ? ILOINT : ILOFLOAT;
+    //
+    char buf[2048];
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    if (!bool_x_aeij[a][e][i][j]) {
+                        continue;
+                    }
+                    sprintf(buf, "x(%d)(%d)(%d)(%d)", a, e, i, j);
+                    aeij_map[std::make_tuple(a, e, i, j)] = IloNumVar(env, 0.0, 1.0, ilo_vType, buf);
                 }
             }
         }
     }
-    return dbl_aeij;
+}
+void del_aeij_inv(Problem *prob, IloNumVar ****aeij_ary) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i = 0; i < prob->cN.size(); i++) {
+                delete [] aeij_ary[a][e][i];
+            }
+            delete [] aeij_ary[a][e];
+        }
+        delete [] aeij_ary[a];
+    }
+    delete [] aeij_ary;
+}
+
+IloNumVar*** new_aei_inv(Problem *prob, IloEnv &env) {
+    char buf[2048];
+    IloNumVar ***aei_ary = new IloNumVar**[prob->A.size()];
+    for (int a: prob->A) {
+        aei_ary[a] = new IloNumVar*[prob->E_a[a].size()];
+        for (int e: prob->E_a[a]) {
+            aei_ary[a][e] = new IloNumVar[prob->cN.size()];
+            for (int i: prob->N_ae[a][e]) {
+                sprintf(buf, "u(%d)(%d)(%d)", a, e, i);
+                aei_ary[a][e][i] = IloNumVar(env, 0.0, DBL_MAX, ILOFLOAT, buf);
+            }
+        }
+    }
+    return aei_ary;
+}
+void new_aei_inv(Problem *prob, IloEnv &env, std::map<iiiTup, IloNumVar> &aei_map) {
+    char buf[2048];
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int i: prob->N_ae[a][e]) {
+                sprintf(buf, "u(%d)(%d)(%d)", a, e, i);
+                aei_map[std::make_tuple(a, e, i)] = IloNumVar(env, 0.0, DBL_MAX, ILOFLOAT, buf);
+            }
+        }
+    }
+}
+void del_aei_inv(Problem *prob, IloNumVar ***aei_ary) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] aei_ary[a][e];
+        }
+        delete [] aei_ary[a];
+    }
+    delete [] aei_ary;
 }
 
 
-double*** new_dbl_aei(Problem *prob) {
+double** new_ak_dbl(Problem *prob) {
+    size_t numAgents, numTasks;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    //
+    double **ak_ary = new double*[numAgents];
+    for (int a: prob->A) {
+        ak_ary[a] = new double[numTasks];
+        for (int k: prob->K) {
+            ak_ary[a][k] = 0.0;
+        }
+    }
+    return ak_ary;
+}
+void new_ak_dbl(Problem *prob, std::map<iiTup, double> &ak_map) {
+    for (int a: prob->A) {
+        for (int k: prob->K) {
+            ak_map[std::make_tuple(a, k)] = 0.0;
+        }
+    }
+}
+void del_ak_dbl(Problem *prob, double **ak_ary) {
+    for (int a: prob->A) {
+        delete [] ak_ary[a];
+    }
+    delete [] ak_ary;
+}
+
+double*** new_aek_dbl(Problem *prob) {
+    size_t numAgents, numTasks, numRR;
+    numAgents = prob->A.size();
+    numTasks = prob->K.size();
+    //
+    double ***aek_ary = new double**[numAgents];
+    for (int a: prob->A) {
+        numRR = prob->E_a[a].size();
+        aek_ary[a] = new double*[numRR];
+        for (int e: prob->E_a[a]) {
+            aek_ary[a][e] = new double[numTasks];
+            for (int k: prob->K) {
+                aek_ary[a][e][k] = 0.0;
+            }
+        }
+    }
+    return aek_ary;
+}
+void new_aek_dbl(Problem *prob, std::map<iiiTup, double> &aek_map) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                aek_map[std::make_tuple(a, e, k)] = 0.0;
+            }
+        }
+    }
+}
+void del_aek_dbl(Problem *prob, double ***aek_ary) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] aek_ary[a][e];
+        }
+        delete [] aek_ary[a];
+    }
+    delete [] aek_ary;
+}
+
+double**** new_aeij_dbl(Problem *prob) {
     size_t numAgents, numNodes, numRR;
     numAgents = prob->A.size();
     numNodes = prob->cN.size();
     //
-    double ***dbl_aei = new double**[numAgents];
+    double ****aeij_ary = new double***[numAgents];
     for (int a: prob->A) {
         numRR = prob->E_a[a].size();
-        dbl_aei[a] = new double*[numRR];
+        aeij_ary[a] = new double**[numRR];
         for (int e: prob->E_a[a]) {
-            dbl_aei[a][e] = new double[numNodes];
+            aeij_ary[a][e] = new double*[numNodes];
             for (int i = 0; i < numNodes; i++) {
-                dbl_aei[a][e][i] = 0.0;
+                aeij_ary[a][e][i] = new double[numNodes];
+                for (int j = 0; j < numNodes; j++) {
+                    aeij_ary[a][e][i][j] = 0.0;
+                }
             }
         }
     }
-    return dbl_aei;
+    return aeij_ary;
 }
-
-void delete_dbl_ak(Problem *prob, double **dbl_ak) {
-    for (int a: prob->A) {
-        delete [] dbl_ak[a];
-    }
-    delete [] dbl_ak;
-}
-
-void delete_dbl_aek(Problem *prob, double ***dbl_aek) {
+void new_aeij_dbl(Problem *prob, bool ****bool_x_aeij, std::map<iiiiTup, double> &aeij_map) {
     for (int a: prob->A) {
         for (int e: prob->E_a[a]) {
-            delete [] dbl_aek[a][e];
+            for (int i: prob->N_ae[a][e]) {
+                for (int j: prob->N_ae[a][e]) {
+                    if (!bool_x_aeij[a][e][i][j]) {
+                        continue;
+                    }
+                    aeij_map[std::make_tuple(a, e, i, j)] = 0.0;
+                }
+            }
         }
-        delete [] dbl_aek[a];
     }
-    delete [] dbl_aek;
 }
-
-void delete_dbl_aeij(Problem *prob, double ****dbl_aeij) {
+void del_aeij_dbl(Problem *prob, double ****aeij_ary) {
     for (int a: prob->A) {
         for (int e: prob->E_a[a]) {
             for (int i = 0; i < prob->cN.size(); i++) {
-                delete [] dbl_aeij[a][e][i];
+                delete [] aeij_ary[a][e][i];
             }
-            delete [] dbl_aeij[a][e];
+            delete [] aeij_ary[a][e];
         }
-        delete [] dbl_aeij[a];
+        delete [] aeij_ary[a];
     }
-    delete [] dbl_aeij;
+    delete [] aeij_ary;
 }
 
-void delete_dbl_aei(Problem *prob, double ***dbl_aei) {
+double*** new_aei_dbl(Problem *prob) {
+    size_t numAgents, numNodes, numRR;
+    numAgents = prob->A.size();
+    numNodes = prob->cN.size();
+    //
+    double ***aei_ary = new double**[numAgents];
+    for (int a: prob->A) {
+        numRR = prob->E_a[a].size();
+        aei_ary[a] = new double*[numRR];
+        for (int e: prob->E_a[a]) {
+            aei_ary[a][e] = new double[numNodes];
+            for (int i = 0; i < numNodes; i++) {
+                aei_ary[a][e][i] = 0.0;
+            }
+        }
+    }
+    return aei_ary;
+}
+void new_aei_dbl(Problem *prob, std::map<iiiTup, double> &aei_map) {
     for (int a: prob->A) {
         for (int e: prob->E_a[a]) {
-            delete [] dbl_aei[a][e];
+            for (int i: prob->N_ae[a][e]) {
+                aei_map[std::make_tuple(a, e, i)] = 0.0;
+            }
         }
-        delete [] dbl_aei[a];
     }
-    delete [] dbl_aei;
+}
+void del_aei_dbl(Problem *prob, double ***aei_ary) {
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            delete [] aei_ary[a][e];
+        }
+        delete [] aei_ary[a];
+    }
+    delete [] aei_ary;
 }
 
 void Problem::gen_aeProbs() {

@@ -125,17 +125,17 @@ Solution* PureGH::solve() {
     sol->wallT = tt->get_elapsedTimeWall();
     for (int a : prob->A) {
         for (int k : prob->K) {
-            sol->y_ak[a][k] = 0.0;
+            sol->y_ary[a][k] = 0.0;
         }
         for (int e: prob->E_a[a]) {
             for (int k : prob->K) {
-                sol->z_aek[a][e][k] = 0.0;
+                sol->z_ary[a][e][k] = 0.0;
             }
             for (int i: prob->N_ae[a][e]) {
                 for (int j: prob->N_ae[a][e]) {
-                    sol->x_aeij[a][e][i][j] = 0.0;
+                    sol->x_ary[a][e][i][j] = 0.0;
                 }
-                sol->u_aei[a][e][i] = 0.0;
+                sol->u_ary[a][e][i] = 0.0;
             }
         }
     }
@@ -148,26 +148,26 @@ Solution* PureGH::solve() {
         sol->objV += agt->currentReward;
         for (int k: prob->K) {
             if (agt->KnP.find(k) != agt->KnP.end()) {
-                sol->y_ak[a][k] = 1.0;
+                sol->y_ary[a][k] = 1.0;
                 for (int e: prob->E_a[a]) {
                     if (agt->KnP_e[e].find(k) != agt->KnP_e[e].end()) {
-                        sol->z_aek[a][e][k] = 1.0;
+                        sol->z_ary[a][e][k] = 1.0;
                     }
                 }
             }
         }
         for (int e: prob->E_a[a]) {
             n0 = agt->Sn_e[e][0];
-            sol->u_aei[a][e][n0] = prob->al_i[n0];
+            sol->u_ary[a][e][n0] = prob->al_i[n0];
             for (int s = 1; s < agt->Sn_e[e].size(); s++) {
                 n1 = agt->Sn_e[e][s];
-                sol->x_aeij[a][e][n0][n1] = 1.0;
+                sol->x_ary[a][e][n0][n1] = 1.0;
                 //
-                double erest_arrvTime = sol->u_aei[a][e][n0] + prob->t_ij[n0][n1];
+                double erest_arrvTime = sol->u_ary[a][e][n0] + prob->t_ij[n0][n1];
                 double actual_arrvTime = erest_arrvTime > prob->al_i[n1] ? erest_arrvTime : prob->al_i[n1];
                 //
                 n0 = n1;
-                sol->u_aei[a][e][n0] = actual_arrvTime;
+                sol->u_ary[a][e][n0] = actual_arrvTime;
             }
         }
     }

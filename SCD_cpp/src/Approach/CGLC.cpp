@@ -65,7 +65,7 @@ void CGLC::rm_build() {
         linExpr.clear();
         sprintf(buf, "TAS(%d)", k);  // Task Assignment
         for (int a : prob->A) {
-            linExpr += rm_y_ak[a][k];
+            linExpr += rm_y_ary[a][k];
         }
         cnsts.add(linExpr <= 1);
         cnsts[cnsts.getSize() - 1].setName(buf);
@@ -77,7 +77,7 @@ void CGLC::rm_build() {
                 if (prob->K_ae[a][e].find(k) == prob->K_ae[a][e].end()) {
                     linExpr.clear();
                     sprintf(buf, "IA(%d)(%d)(%d)", a, e, k);  // Infeasible Assignment
-                    linExpr += rm_y_ak[a][k];
+                    linExpr += rm_y_ary[a][k];
                     cnsts.add(linExpr == 0);
                     cnsts[cnsts.getSize() - 1].setName(buf);
                 }
@@ -188,7 +188,7 @@ void CGLC::rm_update() {
             std::map<int, int> fromToPairs;
             for (int i: prob->N_ae[a][e]) {
                 for (int j: prob->N_ae[a][e]) {
-                    if (lrh_x_aeij[a][e][i][j] > 0.5) {
+                    if (get_x_dbl(a, e, i, j) > 0.5) {
                         fromToPairs[i] = j;
                     }
                 }
@@ -204,7 +204,7 @@ void CGLC::rm_update() {
             og_rut.push_back(route);
             std::vector<double> arT;
             for (int i: route) {
-                arT.push_back(lrh_u_aei[a][e][i]);
+                arT.push_back(get_u_dbl(a, e, i));
                 if (prob->dp_k[i] != -1) {
                     completedTasks.insert(prob->dp_k[i]);
                     completedTasks_a.insert(prob->dp_k[i]);
@@ -236,7 +236,7 @@ void CGLC::rm_update() {
                 linExpr.clear();
                 sprintf(buf, "BI(%d)(%d)(%d)", a, w, k);
                 linExpr += e_wk[w][k] * (*rm_th_w)[w];
-                linExpr -= rm_y_ak[a][k];
+                linExpr -= rm_y_ary[a][k];
                 cnsts.add(linExpr <= 0);
                 cnsts[cnsts.getSize() - 1].setName(buf);
             }
@@ -257,8 +257,8 @@ void CGLC::rm_getSol(Solution *sol) {
     for (int a: prob->A) {
         std::set<int> assignedTasks_a;
         for (int k: prob->K) {
-            sol->y_ak[a][k] = rmCplex->getValue(rm_y_ak[a][k]);
-            if (sol->y_ak[a][k] > 0.5) {
+            sol->y_ary[a][k] = rmCplex->getValue(rm_y_ary[a][k]);
+            if (sol->y_ary[a][k] > 0.5) {
                 assignedTasks_a.insert(k);
             }
         }
@@ -275,51 +275,18 @@ void CGLC::rm_getSol(Solution *sol) {
             assert(chosenColExist);
             for (int k: assignedTasks_a) {
                 if (og_tsk[w].find(k) == og_tsk[w].end()) {
-                    sol->z_aek[a][e][k] = 1.0;
+                    sol->z_ary[a][e][k] = 1.0;
                 }
             }
             int n0 = og_rut[w][0], n1;
-            sol->u_aei[a][e][n0] = og_arT[w][0];
+            sol->u_ary[a][e][n0] = og_arT[w][0];
             for (int i = 1; i < og_rut[w].size(); i++) {
                 n1 = og_rut[w][i];
-                sol->x_aeij[a][e][n0][n1] = 1.0;
+                sol->x_ary[a][e][n0][n1] = 1.0;
                 //
                 n0 = n1;
-                sol->u_aei[a][e][n0] = og_arT[w][i];
+                sol->u_ary[a][e][n0] = og_arT[w][i];
             }
-            
-//            if (chosenColExist) {
-//                for (int k: assignedTasks_a) {
-//                    if (og_tsk[w].find(k) == og_tsk[w].end()) {
-//                        sol->z_aek[a][e][k] = 1.0;
-//                    }
-//                }
-//                int n0 = og_rut[w][0], n1;
-//                sol->u_aei[a][e][n0] = og_arT[w][0];
-//                for (int i = 1; i < og_rut[w].size(); i++) {
-//                    n1 = og_rut[w][i];
-//                    sol->x_aeij[a][e][n0][n1] = 1.0;
-//                    //
-//                    n0 = n1;
-//                    sol->u_aei[a][e][n0] = og_arT[w][i];
-//                }
-//            } else {
-//                for (int k: assignedTasks_a) {
-//                    sol->z_aek[a][e][k] = 1.0;
-//                }
-//                int n0 = prob->R_ae[a][e][0], n1;
-//                sol->u_aei[a][e][n0] = prob->al_i[n0];
-//                for (int i = 1; i < prob->R_ae[a][e].size(); i++) {
-//                    n1 = prob->R_ae[a][e][i];
-//                    sol->x_aeij[a][e][n0][n1] = 1.0;
-//                    //
-//                    double erest_arrvTime = sol->u_aei[a][e][n0] + prob->t_ij[n0][n1];
-//                    double actual_arrvTime = erest_arrvTime > prob->al_i[n1] ? erest_arrvTime : prob->al_i[n1];
-//                    //
-//                    n0 = n1;
-//                    sol->u_aei[a][e][n0] = actual_arrvTime;
-//                }
-//            }
         }
     }
 }

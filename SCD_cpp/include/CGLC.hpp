@@ -24,7 +24,7 @@ public:
     IloModel *rmModel;
     IloCplex *rmCplex;
     //
-    IloNumVar **rm_y_ak;
+    IloNumVar **rm_y_ary;
     IloNumVarArray *rm_th_w;
     IloRangeArray *rm_ONE_cnsts;
     long **rm_ONE_cnsts_index;
@@ -45,7 +45,7 @@ public:
         std::string _router,
         double dual_gap_limit, unsigned int num_iter_limit, unsigned int no_improvement_limit) : LRH(prob, tt, time_limit_sec, numThreads, logPath, lpPath, lp_algo, _router, dual_gap_limit, num_iter_limit, no_improvement_limit) {
         
-        rm_y_ak = new_inv_ak(prob, env, 'I');
+        rm_y_ary = new_ak_inv(prob, env, 'I');
         rm_th_w = new IloNumVarArray(env);
         rm_ONE_cnsts = new IloRangeArray(env);
         rm_ONE_cnsts_index = new long*[prob->A.size()];
@@ -65,7 +65,7 @@ public:
     void rm_build();
     Solution* solve();
     ~CGLC() {
-        delete_inv_ak(prob, rm_y_ak);
+        del_ak_inv(prob, rm_y_ary);
         delete rm_th_w;
         delete rm_ONE_cnsts;
         for (int a: prob->A) {

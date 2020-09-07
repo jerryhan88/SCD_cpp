@@ -39,7 +39,7 @@ void Solution::writeSolTXT(std::string solPathTXT) {
         std::vector<int> assignedTasks;
         std::vector<std::pair<int, int>> associatedNodes;
         for (int k: prob->K) {
-            if (y_ak[a][k] > 0.5) {
+            if (y_ary[a][k] > 0.5) {
                 assignedTasks.push_back(k);
                 associatedNodes.push_back(std::pair<int, int> {prob->h_k[k], prob->n_k[k]});
             }
@@ -67,7 +67,7 @@ void Solution::writeSolTXT(std::string solPathTXT) {
             std::map<int, int> fromToPairs;
             for (int i: prob->N_ae[a][e]) {
                 for (int j: prob->N_ae[a][e]) {
-                    if (x_aeij[a][e][i][j] > 0.5) {
+                    if (x_ary[a][e][i][j] > 0.5) {
                         fromToPairs[i] = j;
                     }
                 }
@@ -105,7 +105,7 @@ void Solution::writeSolTXT(std::string solPathTXT) {
             fout_txt << "]\n";
             fout_txt << "\t\t";
             for (int i = 0; i < route.size(); i++) {
-                sprintf(buf, "%d(%.2f)", route[i], u_aei[a][e][route[i]]);
+                sprintf(buf, "%d(%.2f)", route[i], u_ary[a][e][route[i]]);
                 if (i == 0) {
                     fout_txt << buf;
                 } else {

@@ -12,7 +12,7 @@
 #include <cfloat>
 #include <math.h>
 #include <set>
-#include <tuple>
+#include <map>
 
 #include <ilcplex/ilocplex.h>
 
@@ -23,12 +23,9 @@
 #include "ck_util/util.hpp"         // from util
 
 #define DEFAULT_BUFFER_SIZE 2048
-#define LP_TIME_LIMIT 1800
+//#define LP_TIME_LIMIT 1800
 
-typedef std::tuple<int, int, int, int> iiiiTup;
-typedef std::tuple<int, int, int, double> iiidTup;
-typedef std::tuple<int, double> idTup;
-
+#define LP_TIME_LIMIT 300
 
 
 class SolApprBase {
@@ -55,30 +52,23 @@ public:
     }
 };
 
-IloNumVar** new_inv_ak(Problem *prob, IloEnv &env, char vType);
-IloNumVar*** new_inv_aek(Problem *prob, IloEnv &env, char vType);
-IloNumVar**** new_inv_aeij(Problem *prob, IloEnv &env, char vType, bool ****_x_aeij);
-IloNumVar*** new_inv_aei(Problem *prob, IloEnv &env);
-
-
-void delete_inv_ak(Problem *prob, IloNumVar **inv_ak);
-void delete_inv_aek(Problem *prob, IloNumVar ***inv_aek);
-void delete_inv_aeij(Problem *prob, IloNumVar ****inv_aeij);
-void delete_inv_aei(Problem *prob, IloNumVar ***inv_aei);
-
-
 class BaseMM : public SolApprBase {
 public:
     std::string lpPath;
     std::string pathPrefix;
+    std::string lp_algo;
     //
     IloEnv env;
     IloModel *baseModel;
     IloCplex *baseCplex;
-    IloNumVar **y_ak, ***z_aek, ****x_aeij, ***u_aei;
+    IloNumVar **y_ary, ***z_ary, ****x_ary, ***u_ary;
+    std::map<iiTup, IloNumVar> y_map;
+    std::map<iiiTup, IloNumVar> z_map;
+    std::map<iiiiTup, IloNumVar> x_map;
+    std::map<iiiTup, IloNumVar> u_map;
     IloRangeArray *COM_cnsts;
     long ***COM_cnsts_index;
-    bool ****_x_aeij;
+    bool ****bool_x_aeij;
     //
     BaseMM(Problem *prob, TimeTracker *tt,
            unsigned long time_limit_sec, int numThreads,
@@ -89,18 +79,19 @@ public:
         }
         this->lpPath = lpPath;
         this->pathPrefix = lpPath.substr(0, lpPath.find(".lp"));
+        this->lp_algo = lp_algo;
         //
-        _x_aeij = new bool***[prob->A.size()];
+        bool_x_aeij = new bool***[prob->A.size()];
         for (int a: prob->A) {
-            _x_aeij[a] = new bool**[prob->E_a[a].size()];
+            bool_x_aeij[a] = new bool**[prob->E_a[a].size()];
             for (int e: prob->E_a[a]) {
-                _x_aeij[a][e] = new bool*[prob->cN.size()];
+                bool_x_aeij[a][e] = new bool*[prob->cN.size()];
                 for (int i = 0; i < prob->cN.size(); i++) {
-                    _x_aeij[a][e][i] = new bool[prob->cN.size()];
+                    bool_x_aeij[a][e][i] = new bool[prob->cN.size()];
                 }
                 for (int i: prob->N_ae[a][e]) {
                     for (int j: prob->N_ae[a][e]) {
-                        _x_aeij[a][e][i][j] = true;
+                        bool_x_aeij[a][e][i][j] = true;
                     }
                 }
                 
@@ -108,10 +99,11 @@ public:
         }
         preprocessing();
         //
-        y_ak = new_inv_ak(prob, env, vType);
-        z_aek = new_inv_aek(prob, env, vType);
-        x_aeij = new_inv_aeij(prob, env, vType, _x_aeij);
-        u_aei = new_inv_aei(prob, env);
+        generate_y_inv(vType);
+        generate_z_inv(vType);
+        generate_x_inv(vType);
+        generate_u_inv();
+        //
         COM_cnsts = new IloRangeArray(env);
         COM_cnsts_index = new long**[prob->A.size()];
         for (int a : prob->A) {
@@ -133,28 +125,28 @@ public:
         for (int a: prob->A) {
             for (int e: prob->E_a[a]) {
                 for (int i = 0; i < prob->cN.size(); i++) {
-                    delete [] _x_aeij[a][e][i];
+                    delete [] bool_x_aeij[a][e][i];
                 }
-                delete [] _x_aeij[a][e];
+                delete [] bool_x_aeij[a][e];
             }
-            delete [] _x_aeij[a];
+            delete [] bool_x_aeij[a];
         }
-        delete [] _x_aeij;
+        delete [] bool_x_aeij;
         //
-        delete_inv_ak(prob, y_ak);
-        delete_inv_aek(prob, z_aek);
-        delete_inv_aeij(prob, x_aeij);
-        delete_inv_aei(prob, u_aei);
+        delete_y_inv();
+        delete_z_inv();
+        delete_x_inv();
+        delete_u_inv();
         //
         delete baseCplex;
         delete baseModel;
     }
     //
-    static void def_ETA_cnsts(Problem *prob, IloEnv &env, IloNumVar **y_ak, IloNumVar ***z_aek, IloModel *model) {
+    static void def_ETA_cnsts(Problem *prob, IloEnv &env, IloNumVar **y_ary, IloNumVar ***z_ary, IloModel *model) {
         //
         // Evaluation of the Task Assignment
         //
-        char buf[DEFAULT_BUFFER_SIZE];
+        char buf[2048];
         IloRangeArray cnsts(env);
         IloExpr linExpr(env);
         //
@@ -162,7 +154,7 @@ public:
             linExpr.clear();
             sprintf(buf, "TAS(%d)", k);  // Task Assignment
             for (int a : prob->A) {
-                linExpr += y_ak[a][k];
+                linExpr += y_ary[a][k];
             }
             cnsts.add(linExpr <= 1);
             cnsts[cnsts.getSize() - 1].setName(buf);
@@ -174,7 +166,7 @@ public:
                     if (prob->K_ae[a][e].find(k) == prob->K_ae[a][e].end()) {
                         linExpr.clear();
                         sprintf(buf, "ITA(%d)(%d)(%d)", a, e, k);  // Infeasible Tasks Assignment
-                        linExpr += y_ak[a][k];
+                        linExpr += y_ary[a][k];
                         cnsts.add(linExpr == 0);
                         cnsts[cnsts.getSize() - 1].setName(buf);
                     }
@@ -186,7 +178,7 @@ public:
             linExpr.clear();
             sprintf(buf, "VL(%d)", a);  // Volume Limit
             for (int k: prob->K) {
-                linExpr += prob->v_k[k] * y_ak[a][k];
+                linExpr += prob->v_k[k] * y_ary[a][k];
             }
             cnsts.add(linExpr <= prob->v_a[a]);
             cnsts[cnsts.getSize() - 1].setName(buf);
@@ -196,7 +188,7 @@ public:
             linExpr.clear();
             sprintf(buf, "WL(%d)", a);  // Weight Limit
             for (int k: prob->K) {
-                linExpr += prob->w_k[k] * y_ak[a][k];
+                linExpr += prob->w_k[k] * y_ary[a][k];
             }
             cnsts.add(linExpr <= prob->w_a[a]);
             cnsts[cnsts.getSize() - 1].setName(buf);
@@ -206,8 +198,8 @@ public:
                 for (int k: prob->K) {
                     linExpr.clear();
                     sprintf(buf, "TAC(%d)(%d)(%d)", a, e, k);  // Task Accomplishment
-                    linExpr += z_aek[a][e][k];
-                    linExpr -= y_ak[a][k];
+                    linExpr += z_ary[a][e][k];
+                    linExpr -= y_ary[a][k];
                     cnsts.add(linExpr <= 0);
                     cnsts[cnsts.getSize() - 1].setName(buf);
                 }
@@ -215,11 +207,26 @@ public:
         }
         model->add(cnsts);
     }
-    
 protected:
+    void generate_y_inv(char vType);
+    void generate_z_inv(char vType);
+    void generate_x_inv(char vType);
+    void generate_u_inv();
+    //
+    void delete_y_inv();
+    void delete_z_inv();
+    void delete_x_inv();
+    void delete_u_inv();
+    //
+    IloNumVar get_y_inv(int a, int k);
+    IloNumVar get_z_inv(int a, int e, int k);
+    IloNumVar get_x_inv(int a, int e, int i, int j);
+    IloNumVar get_u_inv(int a, int e, int i);
+    //
     void build_baseModel();
     void preprocessing();
     void def_objF();
+    void def_ETA_cnsts();
     void def_RUT_cnsts();
     void def_FC_cnsts_aeGiven(int a, int e);
     void def_AT_cnsts_aeGiven(int a, int e);

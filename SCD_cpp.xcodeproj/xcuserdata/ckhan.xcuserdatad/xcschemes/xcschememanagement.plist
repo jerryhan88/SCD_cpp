@@ -4,10 +4,15 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>CGLC-BnCoc.xcscheme</key>
+		<key>CGLC-BnCbc.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>7</integer>
+		</dict>
+		<key>CGLC-GH.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>4</integer>
 		</dict>
 		<key>ILP.xcscheme</key>
 		<dict>
@@ -20,11 +25,6 @@
 			<integer>0</integer>
 		</dict>
 		<key>LRH-BnC.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>5</integer>
-		</dict>
-		<key>LRH-BnCoc.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>6</integer>
@@ -42,7 +42,7 @@
 		<key>PureGH.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>4</integer>
+			<integer>5</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>

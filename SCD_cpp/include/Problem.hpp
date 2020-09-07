@@ -9,9 +9,15 @@
 #ifndef Problem_hpp
 #define Problem_hpp
 
+#include <iostream>
 #include <vector>
 #include <set>
 #include <map>
+#include <tuple>
+#include <cfloat>
+
+
+#include <ilcplex/ilocplex.h>
 
 #include "ck_util/util.hpp"
 #include "nlohmann/json.hpp"
@@ -19,15 +25,44 @@
 
 class Problem;
 
-double** new_dbl_ak(Problem *prob);
-double*** new_dbl_aek(Problem *prob);
-double**** new_dbl_aeij(Problem *prob);
-double*** new_dbl_aei(Problem *prob);
+typedef std::tuple<int, int> iiTup;
+typedef std::tuple<int, int, int> iiiTup;
+typedef std::tuple<int, int, int, int> iiiiTup;
+typedef std::tuple<int, int, int, double> iiidTup;
+typedef std::tuple<int, double> idTup;
 
-void delete_dbl_ak(Problem *prob, double **dbl_ak);
-void delete_dbl_aek(Problem *prob, double ***dbl_aek);
-void delete_dbl_aeij(Problem *prob, double ****dbl_aeij);
-void delete_dbl_aei(Problem *prob, double ***dbl_aei);
+IloNumVar** new_ak_inv(Problem *prob, IloEnv &env, char vType);
+void new_ak_inv(Problem *prob, IloEnv &env, char vType, std::map<iiTup, IloNumVar> &ak_map);
+void del_ak_inv(Problem *prob, IloNumVar **ak_ary);
+
+IloNumVar*** new_aek_inv(Problem *prob, IloEnv &env, char vType);
+void new_aek_inv(Problem *prob, IloEnv &env, char vType, std::map<iiiTup, IloNumVar> &aek_map);
+void del_aek_inv(Problem *prob, IloNumVar ***aek_ary);
+
+IloNumVar**** new_aeij_inv(Problem *prob, IloEnv &env, char vType, bool ****bool_x_aeij);
+void new_aeij_inv(Problem *prob, IloEnv &env, char vType, bool ****bool_x_aeij, std::map<iiiiTup, IloNumVar> &aeij_map);
+void del_aeij_inv(Problem *prob, IloNumVar ****aeij_ary);
+
+IloNumVar*** new_aei_inv(Problem *prob, IloEnv &env);
+void new_aei_inv(Problem *prob, IloEnv &env, std::map<iiiTup, IloNumVar> &aei_map);
+void del_aei_inv(Problem *prob, IloNumVar ***aei_ary);
+
+
+double** new_ak_dbl(Problem *prob);
+void new_ak_dbl(Problem *prob, std::map<iiTup, double> &ak_map);
+void del_ak_dbl(Problem *prob, double **ak_ary);
+
+double*** new_aek_dbl(Problem *prob);
+void new_aek_dbl(Problem *prob, std::map<iiiTup, double> &aek_map);
+void del_aek_dbl(Problem *prob, double ***aek_ary);
+
+double**** new_aeij_dbl(Problem *prob);
+void new_aeij_dbl(Problem *prob, bool ****bool_x_aeij, std::map<iiiiTup, double> &aeij_map);
+void del_aeij_dbl(Problem *prob, double ****aeij_ary);
+
+double*** new_aei_dbl(Problem *prob);
+void new_aei_dbl(Problem *prob, std::map<iiiTup, double> &aei_map);
+void del_aei_dbl(Problem *prob, double ***aei_ary);
 
 class Problem {
 public:

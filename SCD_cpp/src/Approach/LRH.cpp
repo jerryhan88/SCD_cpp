@@ -34,6 +34,152 @@ ILOMIPINFOCALLBACK4(timeLimitCallback,
     }
 }
 
+void LRH::gen_y_dbl() {
+    if (lp_algo == "DSM") {
+        lrh_y_ary = new_ak_dbl(prob);
+    } else {
+        new_ak_dbl(prob, lrh_y_map);
+    }
+}
+void LRH::del_y_dbl() {
+    if (lp_algo == "DSM") {
+        del_ak_dbl(prob, lrh_y_ary);
+    } else {
+        lrh_y_map.clear();
+    }
+}
+void LRH::set_y_dbl(int a, int k, double v) {
+    if (lp_algo == "DSM") {
+        lrh_y_ary[a][k] = v;
+    } else {
+        lrh_y_map[std::make_tuple(a, k)] = v;
+    }
+}
+double LRH::get_y_dbl(int a, int k) {
+    if (lp_algo == "DSM") {
+        return lrh_y_ary[a][k];
+    } else {
+        return lrh_y_map[std::make_tuple(a, k)];
+    }
+}
+
+void LRH::gen_z_dbl() {
+    if (lp_algo == "DSM") {
+        lrh_z_ary = new_aek_dbl(prob);
+    } else {
+        new_aek_dbl(prob, lrh_z_map);
+    }
+}
+void LRH::del_z_dbl() {
+    if (lp_algo == "DSM") {
+        del_aek_dbl(prob, lrh_z_ary);
+    } else {
+        lrh_z_map.clear();
+    }
+}
+void LRH::set_z_dbl(int a, int e, int k, double v) {
+    if (lp_algo == "DSM") {
+        lrh_z_ary[a][e][k] = v;
+    } else {
+        lrh_z_map[std::make_tuple(a, e, k)] = v;
+    }
+}
+double LRH::get_z_dbl(int a, int e, int k) {
+    if (lp_algo == "DSM") {
+        return lrh_z_ary[a][e][k];
+    } else {
+        return lrh_z_map[std::make_tuple(a, e, k)];
+    }
+}
+
+void LRH::gen_x_dbl() {
+    if (lp_algo == "DSM") {
+        lrh_x_ary = new_aeij_dbl(prob);
+    } else {
+        new_aeij_dbl(prob, bool_x_aeij, lrh_x_map);
+    }
+}
+void LRH::del_x_dbl() {
+    if (lp_algo == "DSM") {
+        del_aeij_dbl(prob, lrh_x_ary);
+    } else {
+        lrh_x_map.clear();
+    }
+}
+void LRH::set_x_dbl(int a, int e, int i, int j, double v) {
+    if (lp_algo == "DSM") {
+        lrh_x_ary[a][e][i][j] = v;
+    } else {
+        lrh_x_map[std::make_tuple(a, e, i, j)] = v;
+    }
+}
+double LRH::get_x_dbl(int a, int e, int i, int j) {
+    if (lp_algo == "DSM") {
+        return lrh_x_ary[a][e][i][j];
+    } else {
+        return lrh_x_map[std::make_tuple(a, e, i, j)];
+    }
+}
+
+void LRH::gen_u_dbl() {
+    if (lp_algo == "DSM") {
+        lrh_u_ary = new_aei_dbl(prob);
+    } else {
+        new_aei_dbl(prob, lrh_u_map);
+    }
+}
+void LRH::del_u_dbl() {
+    if (lp_algo == "DSM") {
+        del_aei_dbl(prob, lrh_u_ary);
+    } else {
+        lrh_u_map.clear();
+    }
+}
+void LRH::set_u_dbl(int a, int e, int i, double v) {
+    if (lp_algo == "DSM") {
+        lrh_u_ary[a][e][i] = v;
+    } else {
+        lrh_u_map[std::make_tuple(a, e, i)] = v;
+    }
+}
+double LRH::get_u_dbl(int a, int e, int i) {
+    if (lp_algo == "DSM") {
+        return lrh_u_ary[a][e][i];
+    } else {
+        return lrh_u_map[std::make_tuple(a, e, i)];
+    }
+}
+
+void LRH::gen_l_dbl() {
+    if (lp_algo == "DSM") {
+        lrh_l_ary = new_aek_dbl(prob);
+    } else {
+        new_aek_dbl(prob, lrh_l_map);
+    }
+}
+void LRH::del_l_dbl() {
+    if (lp_algo == "DSM") {
+        del_aek_dbl(prob, lrh_l_ary);
+    } else {
+        lrh_l_map.clear();
+    }
+}
+void LRH::set_l_dbl(int a, int e, int k, double v) {
+    if (lp_algo == "DSM") {
+        lrh_l_ary[a][e][k] = v;
+    } else {
+        lrh_l_map[std::make_tuple(a, e, k)] = v;
+    }
+}
+double LRH::get_l_dbl(int a, int e, int k) {
+    if (lp_algo == "DSM") {
+        return lrh_l_ary[a][e][k];
+    } else {
+        return lrh_l_map[std::make_tuple(a, e, k)];
+    }
+}
+
+
 Solution* LRH::solve() {
     std::cout << "\t" << "The LP model has been build " << TimeTracker::get_curTime();
     logging("Begin_Initialization", " ");
@@ -118,7 +264,7 @@ void LRH::init_LMs() {
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K_ae[a][e]) {
-                lrh_l_aek[a][e][k] = baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]);
+                set_l_dbl(a, e, k, baseCplex->getDual((*COM_cnsts)[COM_cnsts_index[a][e][k]]));
             }
         }
     }
@@ -152,9 +298,9 @@ bool LRH::updateLMs() {
             for (int k: prob->K_ae[a][e]) {
                 double sumX = 0.0;
                 for (int j: prob->N_ae[a][e]) {
-                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+                    sumX += get_x_dbl(a, e, j, prob->n_k[k]);
                 }
-                denominator2 += pow(lrh_y_ak[a][k] - lrh_z_aek[a][e][k] - sumX, 2);
+                denominator2 += pow(get_y_dbl(a, k) - get_z_dbl(a, e, k) - sumX, 2);
             }
         }
     }
@@ -169,10 +315,14 @@ bool LRH::updateLMs() {
                 for (int k: prob->K_ae[a][e]) {
                     double sumX = 0.0;
                     for (int j: prob->N_ae[a][e]) {
-                        sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+                        sumX += get_x_dbl(a, e, j, prob->n_k[k]);
                     }
-                    double lm = lrh_l_aek[a][e][k] + at * (lrh_y_ak[a][k] - lrh_z_aek[a][e][k] - sumX);
-                    lrh_l_aek[a][e][k] = lm < 0.0 ? 0.0 : lm;
+                    double lm = get_l_dbl(a, e, k) + at * (get_y_dbl(a, k) - get_z_dbl(a, e, k) - sumX);
+                    if (lm < 0.0) {
+                        set_l_dbl(a, e, k, 0.0);
+                    } else {
+                        set_l_dbl(a, e, k, lm);
+                    }
                 }
             }
         }
@@ -202,7 +352,7 @@ void LRH::solve_dualProblem() {
 }
 
 void LRH::build_allocator() {
-    alr = new Allocator(prob, tt, lrh_l_aek);
+    alr = new Allocator(prob, tt, this);
 }
 
 void LRH::solve_etaModel() {
@@ -231,7 +381,7 @@ void LRH::solve_etaModel() {
     logging("End_solve_etaModel_solve", " ");
     //
     logging("Begin_solve_etaModel_getSol", " ");
-    alr->getSol(&L1_V, lrh_y_ak, lrh_z_aek);
+    alr->getSol(&L1_V, lrh_y_ary, lrh_z_ary);
     logging("End_solve_etaModel_getSol", " ");
     //
     logging("End_solve_etaModel", "L1V: " + std::to_string(L1_V));
@@ -258,25 +408,25 @@ void LRH::build_rutModels() {
             }
             if (_ROUTER == "ILP") {
                 rut = new RouterILP(prob, tt, rut_time_limit_sec,
-                                    a, e, lrh_l_aek,
+                                    a, e, lrh_l_ary, &lrh_l_map,
                                     rutLogPath, rutLpLogPath);
             } else if (_ROUTER.rfind("BnC", 0) == 0) {
                 std::string tmp("BnC");
                 std::string option = _ROUTER.substr(tmp.size(), _ROUTER.size());
-                bool turOnCutPool = option == "oc";
+                bool turOnCutPool = option == "bc";
                 if (!turOnCutPool) {
                     rut = new RouterBnC(prob, tt, rut_time_limit_sec,
-                    a, e, lrh_l_aek,
+                    a, e, lrh_l_ary, &lrh_l_map,
                     rutLogPath, rutLpLogPath);
                 } else {
-                    rut = new RouterBnCoc(prob, tt, rut_time_limit_sec,
-                    a, e, lrh_l_aek,
+                    rut = new RouterBnCbc(prob, tt, rut_time_limit_sec,
+                    a, e, lrh_l_ary, &lrh_l_map,
                     rutLogPath, rutLpLogPath);
                 }
                 
             } else if (_ROUTER == "GH") {
                 rut = new RouterGH(prob, tt, rut_time_limit_sec,
-                                   a, e, lrh_l_aek,
+                                   a, e, lrh_l_ary, &lrh_l_map,
                                    rutLogPath);
             } else {
                 throw "a undefied router is requested";
@@ -367,9 +517,10 @@ void LRH::solve_rutModels() {
                 int scdID0 = prob->rutID_scdID_ae[a][e][rutID0];
                 for (int rutID1: prob->RP_ae[a][e]->N) {
                     int scdID1 = prob->rutID_scdID_ae[a][e][rutID1];
-                    lrh_x_aeij[a][e][scdID0][scdID1] = routers[a][e]->rut_x_ij[rutID0][rutID1];
+                    set_x_dbl(a, e, scdID0, scdID1,
+                              routers[a][e]->rut_x_ij[rutID0][rutID1]);
                 }
-                lrh_u_aei[a][e][scdID0] = routers[a][e]->rut_u_i[rutID0];
+                set_u_dbl(a, e, scdID0, routers[a][e]->rut_u_i[rutID0]);
             }
         }
     }
@@ -377,7 +528,7 @@ void LRH::solve_rutModels() {
 }
 
 void LRH::build_extractor() {
-    pex = new PrimalExtractor(prob, lrh_x_aeij, lrh_u_aei);
+    pex = new PrimalExtractor(prob, this);
 }
 
 void LRH::solve_pexModel() {
@@ -423,13 +574,12 @@ void LRH::logging(std::string indicator, std::string note) {
     }
 }
 
-
-Allocator::Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek) {
+Allocator::Allocator(Problem *prob, TimeTracker *tt, LRH *lrh) {
     this->prob = prob;
+    this->lrh = lrh;
     //
-    eta_y_ak = new_inv_ak(prob, env, 'I');
-    eta_z_aek = new_inv_aek(prob, env, 'I');
-    this->lrh_l_aek = lrh_l_aek;
+    eta_y_ary = new_ak_inv(prob, env, 'I');
+    eta_z_ary = new_aek_inv(prob, env, 'I');
     //
     build();
     //
@@ -439,11 +589,73 @@ Allocator::Allocator(Problem *prob, TimeTracker *tt, double ***lrh_l_aek) {
 void Allocator::build() {
     etaModel = new IloModel(env);
     //
-    IloExpr objF = eta_y_ak[0][0];  // this function is a dummy; later the objective will be updated
+    IloExpr objF(env);
     etaModel->add(IloMinimize(env, objF));
     objF.end();
     //
-    BaseMM::def_ETA_cnsts(prob, env, eta_y_ak, eta_z_aek, etaModel);
+    //
+    // Evaluation of the Task Assignment
+    //
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloRangeArray cnsts(env);
+    IloExpr linExpr(env);
+    //
+    for (int k : prob->K) {
+        linExpr.clear();
+        sprintf(buf, "TAS(%d)", k);  // Task Assignment
+        for (int a : prob->A) {
+            linExpr += eta_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= 1);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    //
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                if (prob->K_ae[a][e].find(k) == prob->K_ae[a][e].end()) {
+                    linExpr.clear();
+                    sprintf(buf, "ITA(%d)(%d)(%d)", a, e, k);  // Infeasible Tasks Assignment
+                    linExpr += eta_y_ary[a][k];
+                    cnsts.add(linExpr == 0);
+                    cnsts[cnsts.getSize() - 1].setName(buf);
+                }
+            }
+        }
+    }
+    //
+    for (int a: prob->A) {
+        linExpr.clear();
+        sprintf(buf, "VL(%d)", a);  // Volume Limit
+        for (int k: prob->K) {
+            linExpr += prob->v_k[k] * eta_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= prob->v_a[a]);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    //
+    for (int a: prob->A) {
+        linExpr.clear();
+        sprintf(buf, "WL(%d)", a);  // Weight Limit
+        for (int k: prob->K) {
+            linExpr += prob->w_k[k] * eta_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= prob->w_a[a]);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                linExpr.clear();
+                sprintf(buf, "TAC(%d)(%d)(%d)", a, e, k);  // Task Accomplishment
+                linExpr += eta_z_ary[a][e][k];
+                linExpr -= eta_y_ary[a][k];
+                cnsts.add(linExpr <= 0);
+                cnsts[cnsts.getSize() - 1].setName(buf);
+            }
+        }
+    }
+    etaModel->add(cnsts);
     //
     etaCplex = new IloCplex(*etaModel);
     etaCplex->setOut(env.getNullStream());
@@ -455,16 +667,16 @@ void Allocator::update() {
     for (int k: prob->K) {
         for (int a : prob->A) {
             for (int e: prob->E_a[a]) {
-                objF += prob->r_k[k] * prob->p_ae[a][e] * eta_z_aek[a][e][k];
+                objF += prob->r_k[k] * prob->p_ae[a][e] * eta_z_ary[a][e][k];
             }
-            objF -= prob->r_k[k] * eta_y_ak[a][k];
+            objF -= prob->r_k[k] * eta_y_ary[a][k];
         }
     }
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K_ae[a][e]) {
-                objF += lrh_l_aek[a][e][k] * eta_y_ak[a][k];
-                objF -= lrh_l_aek[a][e][k] * eta_z_aek[a][e][k];
+                objF += lrh->get_l_dbl(a, e, k) * eta_y_ary[a][k];
+                objF -= lrh->get_l_dbl(a, e, k) * eta_z_ary[a][e][k];
             }
         }
     }
@@ -476,16 +688,16 @@ void Allocator::update() {
     aborted = IloFalse;
 }
 
-void Allocator::getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek) {
+void Allocator::getSol(double *L1_V, double **lrh_y_ary, double ***lrh_z_ary) {
     try {
         *L1_V = -etaCplex->getObjValue();
         for (int a: prob->A) {
             for (int k: prob->K) {
-                lrh_y_ak[a][k] = etaCplex->getValue(eta_y_ak[a][k]);
+                lrh->set_y_dbl(a, k, etaCplex->getValue(eta_y_ary[a][k]));
             }
             for (int e: prob->E_a[a]) {
                 for (int k: prob->K) {
-                    lrh_z_aek[a][e][k] = etaCplex->getValue(eta_z_aek[a][e][k]);
+                    lrh->set_z_dbl(a, e, k, etaCplex->getValue(eta_z_ary[a][e][k]));
                 }
             }
         }
@@ -497,33 +709,110 @@ void Allocator::getSol(double *L1_V, double **lrh_y_ak, double ***lrh_z_aek) {
     }
 }
 
-
+PrimalExtractor::PrimalExtractor(Problem *prob, LRH *lrh){
+   this->prob = prob;
+   this->lrh = lrh;
+   //
+   pex_y_ary = new_ak_inv(prob, env, 'I');
+   pex_z_ary = new_aek_inv(prob, env, 'I');
+   //
+   pex_COM_cnsts = new IloRangeArray(env);
+   pex_COM_cnsts_index = new long**[prob->A.size()];
+   for (int a : prob->A) {
+       pex_COM_cnsts_index[a] = new long*[prob->E_a[a].size()];
+       for (int e: prob->E_a[a]) {
+           pex_COM_cnsts_index[a][e] = new long[prob->K.size()];
+       }
+   }
+   build();
+       
+}
 void PrimalExtractor::build() {
     pexModel = new IloModel(env);
     //
     IloExpr objF(env);
     for (int k: prob->K) {
         for (int a : prob->A) {
-            objF += prob->r_k[k] * pex_y_ak[a][k];
+            objF += prob->r_k[k] * pex_y_ary[a][k];
             for (int e: prob->E_a[a]) {
-                objF -= prob->r_k[k] * prob->p_ae[a][e] * pex_z_aek[a][e][k];
+                objF -= prob->r_k[k] * prob->p_ae[a][e] * pex_z_ary[a][e][k];
             }
         }
     }
     pexModel->add(IloMaximize(env, objF));
     objF.end();
     //
-    BaseMM::def_ETA_cnsts(prob, env, pex_y_ak, pex_z_aek, pexModel);
-    char buf[2048];
+    // Evaluation of the Task Assignment
+    //
+    char buf[DEFAULT_BUFFER_SIZE];
+    IloRangeArray cnsts(env);
     IloExpr linExpr(env);
+    //
+    for (int k : prob->K) {
+        linExpr.clear();
+        sprintf(buf, "TAS(%d)", k);  // Task Assignment
+        for (int a : prob->A) {
+            linExpr += pex_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= 1);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    //
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                if (prob->K_ae[a][e].find(k) == prob->K_ae[a][e].end()) {
+                    linExpr.clear();
+                    sprintf(buf, "ITA(%d)(%d)(%d)", a, e, k);  // Infeasible Tasks Assignment
+                    linExpr += pex_y_ary[a][k];
+                    cnsts.add(linExpr == 0);
+                    cnsts[cnsts.getSize() - 1].setName(buf);
+                }
+            }
+        }
+    }
+    //
+    for (int a: prob->A) {
+        linExpr.clear();
+        sprintf(buf, "VL(%d)", a);  // Volume Limit
+        for (int k: prob->K) {
+            linExpr += prob->v_k[k] * pex_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= prob->v_a[a]);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    //
+    for (int a: prob->A) {
+        linExpr.clear();
+        sprintf(buf, "WL(%d)", a);  // Weight Limit
+        for (int k: prob->K) {
+            linExpr += prob->w_k[k] * pex_y_ary[a][k];
+        }
+        cnsts.add(linExpr <= prob->w_a[a]);
+        cnsts[cnsts.getSize() - 1].setName(buf);
+    }
+    for (int a: prob->A) {
+        for (int e: prob->E_a[a]) {
+            for (int k: prob->K) {
+                linExpr.clear();
+                sprintf(buf, "TAC(%d)(%d)(%d)", a, e, k);  // Task Accomplishment
+                linExpr += pex_z_ary[a][e][k];
+                linExpr -= pex_y_ary[a][k];
+                cnsts.add(linExpr <= 0);
+                cnsts[cnsts.getSize() - 1].setName(buf);
+            }
+        }
+    }
+    pexModel->add(cnsts);
+    //
     for (int a : prob->A) {
         for (int e: prob->E_a[a]) {
             for (int k: prob->K_ae[a][e]) {
                 linExpr.clear();
                 sprintf(buf, "CC(%d)(%d)(%d)", a, e, k);
-                linExpr += pex_y_ak[a][k];
+                linExpr += pex_y_ary[a][k];
                 double sumX = 0.0;
-                linExpr -= pex_z_aek[a][e][k];
+                linExpr -= pex_z_ary[a][e][k];
                 pex_COM_cnsts->add(linExpr <= sumX);
                 (*pex_COM_cnsts)[pex_COM_cnsts->getSize() - 1].setName(buf);
                 pex_COM_cnsts_index[a][e][k] = pex_COM_cnsts->getSize() - 1;
@@ -545,7 +834,7 @@ void PrimalExtractor::update() {
                 long cnsts_id = pex_COM_cnsts_index[a][e][k];
                 double sumX = 0.0;
                 for (int j: prob->N_ae[a][e]) {
-                    sumX += lrh_x_aeij[a][e][j][prob->n_k[k]];
+                    sumX += lrh->get_x_dbl(a, e, j, prob->n_k[k]);
                 }
                 (*pex_COM_cnsts)[cnsts_id].setUB(sumX);
             }
@@ -556,17 +845,17 @@ void PrimalExtractor::update() {
 void PrimalExtractor::getSol(Solution *sol) {
     for (int a: prob->A) {
         for (int k: prob->K) {
-            sol->y_ak[a][k] = pexCplex->getValue(pex_y_ak[a][k]);
+            sol->y_ary[a][k] = pexCplex->getValue(pex_y_ary[a][k]);
         }
         for (int e: prob->E_a[a]) {
             for (int k: prob->K) {
-                sol->z_aek[a][e][k] = pexCplex->getValue(pex_z_aek[a][e][k]);
+                sol->z_ary[a][e][k] = pexCplex->getValue(pex_z_ary[a][e][k]);
             }
             for (int i: prob->N_ae[a][e]) {
                 for (int j: prob->N_ae[a][e]) {
-                    sol->x_aeij[a][e][i][j] = lrh_x_aeij[a][e][i][j];
+                    sol->x_ary[a][e][i][j] = lrh->get_x_dbl(a, e, i, j);
                 }
-                sol->u_aei[a][e][i] = lrh_u_aei[a][e][i];
+                sol->u_ary[a][e][i] = lrh->get_u_dbl(a, e, i);
             }
         }
     }
